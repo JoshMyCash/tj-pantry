@@ -1,16 +1,20 @@
 import "dotenv/config";
-import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
+import { Pool } from "pg";
+import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../src/generated/prisma/client";
-import path from "path";
 
-const raw = process.env.DATABASE_URL ?? "file:./prisma/dev.db";
-const filePath = raw.startsWith("file:") ? raw.slice("file:".length) : raw;
-const absolute = path.isAbsolute(filePath)
-  ? filePath
-  : path.join(process.cwd(), filePath);
-const prisma = new PrismaClient({
-  adapter: new PrismaBetterSqlite3({ url: absolute }),
+const connectionString = process.env.DATABASE_URL;
+if (!connectionString) {
+  throw new Error("DATABASE_URL is not set");
+}
+
+const pool = new Pool({
+  connectionString,
+  ssl: connectionString.includes("sslmode=require")
+    ? { rejectUnauthorized: false }
+    : undefined,
 });
+const prisma = new PrismaClient({ adapter: new PrismaPg(pool) });
 
 async function main() {
   const count = await prisma.location.count();
@@ -184,9 +188,13 @@ async function main() {
 }
 
 main()
-  .then(() => prisma.$disconnect())
+  .then(async () => {
+    await prisma.$disconnect();
+    await pool.end();
+  })
   .catch(async (e) => {
     console.error(e);
     await prisma.$disconnect();
+    await pool.end();
     process.exit(1);
   });

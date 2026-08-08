@@ -5,20 +5,40 @@ Personal Trader Joe’s tracker: import receipts (OCR + paste), enrich products 
 ## Stack
 
 - Next.js (App Router) + TypeScript + Tailwind
-- Prisma 7 + SQLite (`better-sqlite3`)
+- Prisma 7 + **Postgres** (Prisma Postgres / Neon-compatible — works on Vercel free)
 - Tesseract.js for client-side receipt OCR
 - Open Food Facts search API for images / calories
 
-## Setup
+## Local setup
 
 ```bash
 npm install
-npm run db:migrate
+# set DATABASE_URL in .env (Postgres connection string)
+npm run db:push   # or: npm run db:migrate
 npm run db:seed
 npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000).
+
+## Deploy free on Vercel
+
+1. Push this repo to GitHub (or deploy from CLI).
+2. Import the project at [vercel.com/new](https://vercel.com/new) (Hobby / free plan).
+3. Add environment variable **`DATABASE_URL`** — a free Postgres URL:
+   - [Prisma Postgres](https://www.prisma.io/postgres) (claim a `create-db` database), or
+   - [Neon](https://neon.tech) free tier / Vercel Marketplace → Neon
+4. Set **Build Command** to `npm run vercel-build` (or use the included `vercel.json`).
+5. Deploy. The build runs migrations + seed automatically.
+
+### CLI deploy
+
+```bash
+npx vercel login
+npx vercel link
+npx vercel env add DATABASE_URL production
+npx vercel --prod
+```
 
 ## Features
 
