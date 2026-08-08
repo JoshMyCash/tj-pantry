@@ -2,13 +2,19 @@
 // npm install --save-dev prisma dotenv
 import "dotenv/config";
 import { defineConfig } from "prisma/config";
+import { resolveDatabaseUrl } from "./src/lib/database-url";
+
+// Use process.env-style resolution (not env()) so `prisma generate` still works
+// when no database URL is present. migrate deploy requires a real URL.
+const datasourceUrl = resolveDatabaseUrl();
 
 export default defineConfig({
   schema: "prisma/schema.prisma",
   migrations: {
     path: "prisma/migrations",
+    seed: "tsx prisma/seed.ts",
   },
   datasource: {
-    url: process.env["DATABASE_URL"],
+    url: datasourceUrl,
   },
 });

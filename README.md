@@ -25,11 +25,13 @@ Open [http://localhost:3000](http://localhost:3000).
 
 1. Push this repo to GitHub (or deploy from CLI).
 2. Import the project at [vercel.com/new](https://vercel.com/new) (Hobby / free plan).
-3. Add environment variable **`DATABASE_URL`** — a free Postgres URL:
-   - [Prisma Postgres](https://www.prisma.io/postgres) (claim a `create-db` database), or
-   - [Neon](https://neon.tech) free tier / Vercel Marketplace → Neon
+3. Add a Postgres connection string env var (enable it for **Build** and **Runtime**):
+   - **`DATABASE_URL`** (preferred), or Neon/Vercel’s `POSTGRES_URL` / `POSTGRES_PRISMA_URL`
+   - Free options: [Prisma Postgres](https://www.prisma.io/postgres), [Neon](https://neon.tech) / Vercel Marketplace → Neon
 4. Set **Build Command** to `npm run vercel-build` (or use the included `vercel.json`).
-5. Deploy. The build runs migrations + seed automatically.
+5. Deploy. The build resolves the DB URL, runs migrations + seed, then `next build`.
+
+If the build fails with a missing datasource URL, the env var is unset for the Build environment in Vercel.
 
 ### CLI deploy
 
