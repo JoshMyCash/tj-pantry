@@ -1,0 +1,142 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+enum ProductStatus {
+  ACTIVE
+  ARCHIVED
+  CANT_FIND
+}
+
+enum MealType {
+  BREAKFAST
+  LUNCH
+  DINNER
+  SNACK
+  OTHER
+}
+
+enum ReceiptSource {
+  OCR
+  MANUAL
+}
+
+enum CrowdLevel {
+  QUIET
+  MODERATE
+  BUSY
+  PACKED
+}
+
+model Location {
+  id              String         @id @default(cuid())
+  name            String
+  address         String
+  city            String
+  state           String
+  zip             String
+  hours           String
+  restockingTimes String
+  typicalCrowd    CrowdLevel     @default(MODERATE)
+  crowdNotes      String         @default("")
+  notes           String         @default("")
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  receipts        Receipt[]
+  groceryLists    GroceryList[]
+  crowdReports    CrowdReport[]
+}
+
+model Product {
+  id               String            @id @default(cuid())
+  name             String
+  brand            String            @default("Trader Joe's")
+  barcode          String?
+  imageUrl         String?
+  calories         Int?
+  servingSize      String?
+  nutritionJson    String?
+  openFoodFactsId  String?
+  status           ProductStatus     @default(ACTIVE)
+  rating           Int?
+  tried            Boolean           @default(false)
+  liked            Boolean           @default(false)
+  mealType         MealType?
+  notes            String            @default("")
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  receiptItems     ReceiptItem[]
+  groceryListItems GroceryListItem[]
+
+  @@index([name])
+  @@index([status])
+  @@index([liked, tried])
+}
+
+model Receipt {
+  id          String        @id @default(cuid())
+  locationId  String?
+  location    Location?     @relation(fields: [locationId], references: [id])
+  purchasedAt DateTime      @default(now())
+  rawText     String        @default("")
+  imageData   String?
+  subtotal    Float         @default(0)
+  tax         Float         @default(0)
+  total       Float         @default(0)
+  source      ReceiptSource @default(MANUAL)
+  notes       String        @default("")
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  items       ReceiptItem[]
+}
+
+model ReceiptItem {
+  id         String  @id @default(cuid())
+  receiptId  String
+  receipt    Receipt @relation(fields: [receiptId], references: [id], onDelete: Cascade)
+  productId  String?
+  product    Product? @relation(fields: [productId], references: [id])
+  rawName    String
+  quantity   Float   @default(1)
+  unitPrice  Float   @default(0)
+  totalPrice Float   @default(0)
+}
+
+model GroceryList {
+  id         String            @id @default(cuid())
+  name       String
+  locationId String?
+  location   Location?         @relation(fields: [locationId], references: [id])
+  notes      String            @default("")
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+  items      GroceryListItem[]
+}
+
+model GroceryListItem {
+  id            String      @id @default(cuid())
+  groceryListId String
+  groceryList   GroceryList @relation(fields: [groceryListId], references: [id], onDelete: Cascade)
+  productId     String
+  product       Product     @relation(fields: [productId], references: [id])
+  quantity      Float       @default(1)
+  checked       Boolean     @default(false)
+  mealType      MealType?
+  notes         String      @default("")
+}
+
+model CrowdReport {
+  id         String     @id @default(cuid())
+  locationId String
+  location   Location   @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  observedAt DateTime   @default(now())
+  dayOfWeek  Int
+  hour       Int
+  level      CrowdLevel
+  notes      String     @default("")
+}

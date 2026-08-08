@@ -1,0 +1,53 @@
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { prisma } from "@/lib/db";
+import { averagePricesByProduct } from "@/lib/products";
+import { ListDetailClient } from "@/components/ListDetailClient";
+
+export const dynamic = "force-dynamic";
+
+export default async function ListDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+  const [list, products] = await Promise.all([
+    prisma.groceryList.findUnique({
+      where: { id },
+      include: {
+        location: true,
+        items: { include: { product: true } },
+      },
+    }),
+    prisma.product.findMany({ orderBy: { name: "asc" } }),
+  ]);
+  if (!list) notFound();
+  const averages = await averagePricesByProduct();
+  const estimate = Number(
+    list.items
+      .reduce((s, item) => s + (averages.get(item.productId) ?? 0) * item.quantity, 0)
+      .toFixed(2),
+  );
+
+  return (
+    <div className="space-y-6 animate-rise">
+      <Link href="/lists" className="text-sm font-semibold text-tj-red">
+        ← Lists
+      </Link>
+      <header>
+        <h1 className="font-[family-name:var(--font-display)] text-4xl">{list.name}</h1>
+        <p className="text-tj-muted mt-1">
+          {list.location?.name ?? "Any store"}
+          {list.notes ? ` · ${list.notes}` : ""}
+        </p>
+      </header>
+      <ListDetailClient
+        listId={list.id}
+        initialItems={list.items}
+        products={products}
+        estimate={estimate}
+      />
+    </div>
+  );
+}
