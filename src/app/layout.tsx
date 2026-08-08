@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import type { ReactNode } from "react";
 import { Fraunces, Source_Sans_3 } from "next/font/google";
 import { Nav } from "@/components/Nav";
 import "./globals.css";
@@ -19,7 +20,7 @@ export const metadata: Metadata = {
     "Import receipts, rate finds, build grocery lists, and track your Trader Joe's stores.",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" className={`${display.variable} ${body.variable} h-full`}>
       <body className="min-h-full flex flex-col antialiased">
