@@ -1,13 +1,33 @@
 import "dotenv/config";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../generated/prisma/client";
+import { hashPassword } from "../src/lib/password";
 
 const adapter = new PrismaPg({
   connectionString: process.env.DATABASE_URL!,
 });
 const prisma = new PrismaClient({ adapter });
 
+async function ensureUsers() {
+  const joshHash = hashPassword("Josh");
+  await prisma.user.upsert({
+    where: { username: "josh" },
+    update: {
+      displayName: "Josh",
+      passwordHash: joshHash,
+    },
+    create: {
+      username: "josh",
+      displayName: "Josh",
+      passwordHash: joshHash,
+    },
+  });
+  console.log("Ensured user: josh / Josh");
+}
+
 async function main() {
+  await ensureUsers();
+
   const count = await prisma.location.count();
   if (count > 0) {
     console.log("Already seeded");
