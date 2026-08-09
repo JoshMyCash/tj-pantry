@@ -6,18 +6,31 @@ import { money, fmtDate } from "@/lib/format";
 export const dynamic = "force-dynamic";
 
 export default async function CostsPage() {
-  const receipts = await prisma.receipt.findMany({
-    orderBy: { purchasedAt: "desc" },
-    include: { location: true, items: true },
-  });
-  const favorites = await prisma.product.findMany({
-    where: { liked: true, tried: true, status: "ACTIVE" },
-    orderBy: { name: "asc" },
-  });
-  const averages = await averagePricesByProduct();
+  const [receipts, favorites, averages, aggregates] = await Promise.all([
+    prisma.receipt.findMany({
+      orderBy: { purchasedAt: "desc" },
+      select: {
+        id: true,
+        total: true,
+        purchasedAt: true,
+        location: { select: { name: true } },
+      },
+    }),
+    prisma.product.findMany({
+      where: { liked: true, tried: true, status: "ACTIVE" },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true },
+    }),
+    averagePricesByProduct(),
+    prisma.receipt.aggregate({
+      _sum: { total: true },
+      _avg: { total: true },
+      _count: true,
+    }),
+  ]);
 
-  const totalSpent = receipts.reduce((s, r) => s + r.total, 0);
-  const avgTrip = receipts.length ? totalSpent / receipts.length : 0;
+  const totalSpent = aggregates._sum.total ?? 0;
+  const avgTrip = aggregates._avg.total ?? 0;
   const favoritesEstimate = favorites.reduce(
     (s, p) => s + (averages.get(p.id) ?? 0),
     0,
@@ -46,7 +59,7 @@ export default async function CostsPage() {
       <section className="grid gap-6 sm:grid-cols-3 animate-rise-delay">
         <Stat label="All-time spend" value={money(totalSpent)} />
         <Stat label="Average trip" value={money(avgTrip)} />
-        <Stat label="Favorites list estimate" value={money(favoritesEstimate)} />
+        <Stat label="Favorites run estimate" value={money(favoritesEstimate)} />
       </section>
 
       <section>

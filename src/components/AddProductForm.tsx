@@ -43,7 +43,7 @@ export function AddProductForm() {
   return (
     <div>
       <button type="button" className="btn btn-primary" onClick={() => setOpen((v) => !v)}>
-        {open ? "Cancel" : "Add product"}
+        {open ? "Close form" : "Add product"}
       </button>
       {open && (
         <form onSubmit={onSubmit} className="mt-4 surface rounded-2xl p-4 grid gap-3 sm:grid-cols-2">

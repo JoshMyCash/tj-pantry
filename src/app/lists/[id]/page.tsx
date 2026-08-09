@@ -12,7 +12,7 @@ export default async function ListDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [list, products] = await Promise.all([
+  const [list, products, averages] = await Promise.all([
     prisma.groceryList.findUnique({
       where: { id },
       include: {
@@ -20,13 +20,22 @@ export default async function ListDetailPage({
         items: { include: { product: true } },
       },
     }),
-    prisma.product.findMany({ orderBy: { name: "asc" } }),
+    prisma.product.findMany({
+      where: { status: "ACTIVE" },
+      select: { id: true, name: true, mealType: true, status: true },
+      orderBy: { name: "asc" },
+      take: 500,
+    }),
+    averagePricesByProduct(),
   ]);
   if (!list) notFound();
-  const averages = await averagePricesByProduct();
+
   const estimate = Number(
     list.items
-      .reduce((s, item) => s + (averages.get(item.productId) ?? 0) * item.quantity, 0)
+      .reduce(
+        (s, item) => s + (averages.get(item.productId) ?? 0) * item.quantity,
+        0,
+      )
       .toFixed(2),
   );
 

@@ -25,6 +25,7 @@ export function ProductDetailClient({ product }: { product: Product }) {
   const [p, setP] = useState(product);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const [msgTone, setMsgTone] = useState<"ok" | "err">("ok");
 
   async function patch(data: Partial<Product>) {
     setBusy(true);
@@ -40,6 +41,7 @@ export function ProductDetailClient({ product }: { product: Product }) {
       setP(next);
       router.refresh();
     } catch (e) {
+      setMsgTone("err");
       setMsg(e instanceof Error ? e.message : "Error");
     } finally {
       setBusy(false);
@@ -54,9 +56,11 @@ export function ProductDetailClient({ product }: { product: Product }) {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "No match");
       setP(data.product);
-      setMsg("Enriched from Open Food Facts");
+      setMsgTone("ok");
+      setMsg("Pulled image & calories from Open Food Facts");
       router.refresh();
     } catch (e) {
+      setMsgTone("err");
       setMsg(e instanceof Error ? e.message : "Error");
     } finally {
       setBusy(false);
@@ -71,6 +75,10 @@ export function ProductDetailClient({ product }: { product: Product }) {
           <img
             src={p.imageUrl}
             alt={p.name}
+            width={192}
+            height={192}
+            loading="eager"
+            decoding="async"
             className="h-48 w-48 rounded-2xl object-cover bg-white shadow-sm"
           />
         ) : (
@@ -102,11 +110,23 @@ export function ProductDetailClient({ product }: { product: Product }) {
             >
               {p.liked ? "Liked" : "Like"}
             </button>
-            <button type="button" className="btn btn-secondary" disabled={busy} onClick={enrich}>
-              Grab image & calories
+            <button
+              type="button"
+              className="btn btn-secondary"
+              disabled={busy}
+              onClick={enrich}
+            >
+              {busy ? "Working…" : "Find image & calories"}
             </button>
           </div>
-          {msg && <p className="text-sm text-tj-leaf">{msg}</p>}
+          {msg && (
+            <p
+              className={`text-sm ${msgTone === "ok" ? "text-tj-leaf" : "text-tj-red"}`}
+              role={msgTone === "err" ? "alert" : undefined}
+            >
+              {msg}
+            </p>
+          )}
         </div>
       </div>
 

@@ -22,35 +22,37 @@ export default async function ProductsPage({
   searchParams: Search;
 }) {
   const sp = await searchParams;
-  const products = await prisma.product.findMany({
-    where: {
-      ...(sp.status
-        ? { status: sp.status as "ACTIVE" | "ARCHIVED" | "CANT_FIND" }
-        : {}),
-      ...(sp.meal
-        ? {
-            mealType: sp.meal as
-              | "BREAKFAST"
-              | "LUNCH"
-              | "DINNER"
-              | "SNACK"
-              | "OTHER",
-          }
-        : {}),
-      ...(sp.liked === "1" ? { liked: true } : {}),
-      ...(sp.tried === "1" ? { tried: true } : {}),
-      ...(sp.q
-        ? {
-            OR: [
-              { name: { contains: sp.q } },
-              { brand: { contains: sp.q } },
-            ],
-          }
-        : {}),
-    },
-    orderBy: [{ status: "asc" }, { liked: "desc" }, { name: "asc" }],
-  });
-  const averages = await averagePricesByProduct();
+  const [products, averages] = await Promise.all([
+    prisma.product.findMany({
+      where: {
+        ...(sp.status
+          ? { status: sp.status as "ACTIVE" | "ARCHIVED" | "CANT_FIND" }
+          : {}),
+        ...(sp.meal
+          ? {
+              mealType: sp.meal as
+                | "BREAKFAST"
+                | "LUNCH"
+                | "DINNER"
+                | "SNACK"
+                | "OTHER",
+            }
+          : {}),
+        ...(sp.liked === "1" ? { liked: true } : {}),
+        ...(sp.tried === "1" ? { tried: true } : {}),
+        ...(sp.q
+          ? {
+              OR: [
+                { name: { contains: sp.q, mode: "insensitive" } },
+                { brand: { contains: sp.q, mode: "insensitive" } },
+              ],
+            }
+          : {}),
+      },
+      orderBy: [{ status: "asc" }, { liked: "desc" }, { name: "asc" }],
+    }),
+    averagePricesByProduct(),
+  ]);
 
   return (
     <div className="space-y-8">
@@ -84,6 +86,10 @@ export default async function ProductsPage({
                   <img
                     src={p.imageUrl}
                     alt=""
+                    width={56}
+                    height={56}
+                    loading="lazy"
+                    decoding="async"
                     className="h-14 w-14 rounded-lg object-cover bg-white"
                   />
                 ) : (

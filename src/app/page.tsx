@@ -13,27 +13,37 @@ export default async function HomePage() {
   }
 
   try {
-    const [productCount, liked, receipts, locations, lists] = await Promise.all([
-      prisma.product.count({ where: { status: "ACTIVE" } }),
-      prisma.product.findMany({
-        where: { liked: true, tried: true, status: "ACTIVE" },
-        take: 6,
-        orderBy: { rating: "desc" },
-      }),
-      prisma.receipt.findMany({
-        take: 3,
-        orderBy: { purchasedAt: "desc" },
-        include: { location: true, items: true },
-      }),
-      prisma.location.findMany({ take: 3, orderBy: { name: "asc" } }),
-      prisma.groceryList.findMany({
-        take: 2,
-        orderBy: { updatedAt: "desc" },
-        include: { items: true },
-      }),
-    ]);
+    const [productCount, liked, receipts, locations, lists, averages] =
+      await Promise.all([
+        prisma.product.count({ where: { status: "ACTIVE" } }),
+        prisma.product.findMany({
+          where: { liked: true, tried: true, status: "ACTIVE" },
+          take: 6,
+          orderBy: { rating: "desc" },
+        }),
+        prisma.receipt.findMany({
+          take: 3,
+          orderBy: { purchasedAt: "desc" },
+          select: {
+            id: true,
+            total: true,
+            location: { select: { name: true } },
+            _count: { select: { items: true } },
+          },
+        }),
+        prisma.location.findMany({ take: 3, orderBy: { name: "asc" } }),
+        prisma.groceryList.findMany({
+          take: 2,
+          orderBy: { updatedAt: "desc" },
+          select: {
+            id: true,
+            name: true,
+            _count: { select: { items: true } },
+          },
+        }),
+        averagePricesByProduct(),
+      ]);
 
-    const averages = await averagePricesByProduct();
     const favoritesEstimate = liked.reduce(
       (s, p) => s + (averages.get(p.id) ?? 0),
       0,
@@ -83,7 +93,7 @@ export default async function HomePage() {
           <Stat label="Active products" value={String(productCount)} />
           <Stat label="Recent trip spend" value={money(spent)} />
           <Stat
-            label="Favorites list estimate"
+            label="Favorites run estimate"
             value={money(favoritesEstimate)}
           />
         </section>
@@ -162,7 +172,7 @@ export default async function HomePage() {
                   {r.location?.name ?? "Unknown store"}
                 </p>
                 <p className="mt-1 text-2xl font-semibold">{money(r.total)}</p>
-                <p className="text-sm text-tj-muted">{r.items.length} items</p>
+                <p className="text-sm text-tj-muted">{r._count.items} items</p>
               </Link>
             ))}
             {!receipts.length && (
@@ -171,7 +181,7 @@ export default async function HomePage() {
           </div>
           {lists.length > 0 && (
             <p className="mt-6 text-sm text-tj-muted">
-              Active lists: {lists.map((l) => l.name).join(" · ")} ({lists.reduce((s, l) => s + l.items.length, 0)} items)
+              Active lists: {lists.map((l) => l.name).join(" · ")} ({lists.reduce((s, l) => s + l._count.items, 0)} items)
             </p>
           )}
         </section>

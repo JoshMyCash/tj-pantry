@@ -2,7 +2,7 @@
 
 import { FormEvent, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { createWorker } from "tesseract.js";
+import Link from "next/link";
 
 type Location = { id: string; name: string };
 
@@ -13,16 +13,25 @@ type ParsedItem = {
   totalPrice: number;
 };
 
+function todayInputValue() {
+  const d = new Date();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
 export function ReceiptImport({ locations }: { locations: Location[] }) {
   const router = useRouter();
   const [rawText, setRawText] = useState("");
   const [items, setItems] = useState<ParsedItem[]>([]);
   const [locationId, setLocationId] = useState(locations[0]?.id ?? "");
+  const [purchasedAt, setPurchasedAt] = useState(todayInputValue());
   const [tax, setTax] = useState("0");
   const [source, setSource] = useState<"OCR" | "MANUAL">("MANUAL");
   const [ocrStatus, setOcrStatus] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [parsing, setParsing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [parseHint, setParseHint] = useState<string | null>(null);
 
   const subtotal = useMemo(
     () => Number(items.reduce((s, i) => s + i.totalPrice, 0).toFixed(2)),
@@ -31,10 +40,18 @@ export function ReceiptImport({ locations }: { locations: Location[] }) {
   const total = Number((subtotal + Number(tax || 0)).toFixed(2));
 
   async function runOcr(file: File) {
-    setOcrStatus("Running OCR…");
+    if (file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")) {
+      setError("PDF isn’t supported yet — use a photo (JPG/PNG) or paste text.");
+      return;
+    }
+    setBusy(true);
+    setOcrStatus("Loading OCR…");
     setError(null);
+    setParseHint(null);
     setSource("OCR");
     try {
+      const { createWorker } = await import("tesseract.js");
+      setOcrStatus("Reading receipt…");
       const worker = await createWorker("eng");
       const {
         data: { text },
@@ -46,18 +63,42 @@ export function ReceiptImport({ locations }: { locations: Location[] }) {
     } catch (e) {
       setError(e instanceof Error ? e.message : "OCR failed");
       setOcrStatus(null);
+    } finally {
+      setBusy(false);
     }
   }
 
   async function parseText(text: string) {
-    const res = await fetch("/api/receipts/parse", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text }),
-    });
-    const data = await res.json();
-    setItems(data.items ?? []);
-    if (data.tax != null) setTax(String(data.tax));
+    setParsing(true);
+    setError(null);
+    setParseHint(null);
+    try {
+      const res = await fetch("/api/receipts/parse", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text }),
+      });
+      const data = (await res.json().catch(() => ({}))) as {
+        items?: ParsedItem[];
+        tax?: number | null;
+        error?: string;
+      };
+      if (!res.ok) {
+        throw new Error(data.error ?? "Could not parse receipt text");
+      }
+      const nextItems = data.items ?? [];
+      setItems(nextItems);
+      if (data.tax != null) setTax(String(data.tax));
+      if (!nextItems.length) {
+        setParseHint(
+          "No line items found. Check the text looks like receipt lines (name + price), then try again.",
+        );
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Parse failed");
+    } finally {
+      setParsing(false);
+    }
   }
 
   async function onParseClick() {
@@ -83,11 +124,15 @@ export function ReceiptImport({ locations }: { locations: Location[] }) {
     setBusy(true);
     setError(null);
     try {
+      const purchasedIso = purchasedAt
+        ? new Date(`${purchasedAt}T12:00:00`).toISOString()
+        : undefined;
       const res = await fetch("/api/receipts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           locationId: locationId || null,
+          purchasedAt: purchasedIso,
           rawText,
           source,
           tax: Number(tax || 0),
@@ -97,20 +142,32 @@ export function ReceiptImport({ locations }: { locations: Location[] }) {
           linkProducts: true,
         }),
       });
-      if (!res.ok) throw new Error("Could not save receipt");
-      const receipt = await res.json();
-      router.push(`/receipts/${receipt.id}`);
+      const data = (await res.json().catch(() => ({}))) as {
+        id?: string;
+        error?: string;
+      };
+      if (!res.ok) throw new Error(data.error ?? "Could not save receipt");
+      router.push(`/receipts/${data.id}`);
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error");
-    } finally {
       setBusy(false);
     }
   }
 
   return (
     <form onSubmit={onSubmit} className="space-y-5 surface rounded-2xl p-5">
-      <div className="grid gap-3 sm:grid-cols-2">
+      {!locations.length && (
+        <p className="rounded-lg bg-tj-mist/50 px-3 py-2 text-sm text-tj-ink">
+          No stores yet.{" "}
+          <Link href="/locations" className="font-semibold text-tj-red underline-offset-2 hover:underline">
+            Add a store
+          </Link>{" "}
+          so receipts can be tied to a location.
+        </p>
+      )}
+
+      <div className="grid gap-3 sm:grid-cols-3">
         <label className="text-sm">
           Store
           <select
@@ -127,11 +184,21 @@ export function ReceiptImport({ locations }: { locations: Location[] }) {
           </select>
         </label>
         <label className="text-sm">
-          Photo / PDF for OCR
+          Purchase date
+          <input
+            type="date"
+            className="input mt-1"
+            value={purchasedAt}
+            onChange={(e) => setPurchasedAt(e.target.value)}
+          />
+        </label>
+        <label className="text-sm">
+          Photo for OCR
           <input
             type="file"
-            accept="image/*,.pdf"
+            accept="image/*"
             className="input mt-1"
+            disabled={busy}
             onChange={(e) => {
               const file = e.target.files?.[0];
               if (file) void runOcr(file);
@@ -150,9 +217,15 @@ export function ReceiptImport({ locations }: { locations: Location[] }) {
           placeholder={"Organic Bananas 1.29\n2 x Mandarin Orange Chicken 11.98\nTax 1.05\nTotal 14.32"}
         />
       </label>
-      <button type="button" className="btn btn-secondary" onClick={() => void onParseClick()}>
-        Parse text into line items
+      <button
+        type="button"
+        className="btn btn-secondary"
+        disabled={busy || parsing || !rawText.trim()}
+        onClick={() => void onParseClick()}
+      >
+        {parsing ? "Parsing…" : "Parse text into line items"}
       </button>
+      {parseHint && <p className="text-sm text-tj-muted">{parseHint}</p>}
 
       {items.length > 0 && (
         <div className="overflow-x-auto">
@@ -172,6 +245,7 @@ export function ReceiptImport({ locations }: { locations: Location[] }) {
                   <td className="py-2 pr-2">
                     <input
                       className="input"
+                      aria-label={`Item ${idx + 1} name`}
                       value={item.rawName}
                       onChange={(e) => updateItem(idx, { rawName: e.target.value })}
                     />
@@ -181,6 +255,7 @@ export function ReceiptImport({ locations }: { locations: Location[] }) {
                       type="number"
                       step="0.01"
                       className="input"
+                      aria-label={`Item ${idx + 1} quantity`}
                       value={item.quantity}
                       onChange={(e) =>
                         updateItem(idx, { quantity: Number(e.target.value) })
@@ -192,6 +267,7 @@ export function ReceiptImport({ locations }: { locations: Location[] }) {
                       type="number"
                       step="0.01"
                       className="input"
+                      aria-label={`Item ${idx + 1} unit price`}
                       value={item.unitPrice}
                       onChange={(e) =>
                         updateItem(idx, { unitPrice: Number(e.target.value) })
@@ -248,8 +324,12 @@ export function ReceiptImport({ locations }: { locations: Location[] }) {
         </div>
       </div>
 
-      {error && <p className="text-sm text-tj-red">{error}</p>}
-      <button type="submit" className="btn btn-primary" disabled={busy || !items.length}>
+      {error && (
+        <p className="text-sm text-tj-red" role="alert">
+          {error}
+        </p>
+      )}
+      <button type="submit" className="btn btn-primary" disabled={busy || parsing || !items.length}>
         {busy ? "Saving…" : "Save receipt & link products"}
       </button>
     </form>

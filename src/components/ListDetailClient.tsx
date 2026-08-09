@@ -40,87 +40,199 @@ export function ListDetailClient({
 }) {
   const router = useRouter();
   const [items, setItems] = useState(initialItems);
-  const [productId, setProductId] = useState(products[0]?.id ?? "");
+  const [query, setQuery] = useState("");
+  const [productId, setProductId] = useState("");
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const activeProducts = useMemo(
+    () => products.filter((p) => p.status === "ACTIVE"),
+    [products],
+  );
+
+  const filteredProducts = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const pool = q
+      ? activeProducts.filter((p) => p.name.toLowerCase().includes(q))
+      : activeProducts;
+    return pool.slice(0, 80);
+  }, [activeProducts, query]);
+
+  const selectedProductId = productId || filteredProducts[0]?.id || "";
+
+  const liveEstimate = useMemo(() => {
+    // Keep server estimate as baseline; adjust only for checked visual weight isn’t needed.
+    return estimate;
+  }, [estimate]);
 
   const grouped = useMemo(() => {
+    const uncheckedFirst = [...items].sort((a, b) => Number(a.checked) - Number(b.checked));
     return MEALS.map((meal) => ({
       meal,
-      items: items.filter((i) => (i.mealType ?? null) === meal),
+      items: uncheckedFirst.filter((i) => (i.mealType ?? null) === meal),
     })).filter((g) => g.items.length > 0 || mealSectionAlways(g.meal, items));
   }, [items]);
 
   async function toggle(item: Item) {
+    setError(null);
     const res = await fetch(`/api/lists/items/${item.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ checked: !item.checked }),
     });
-    if (!res.ok) return;
+    if (!res.ok) {
+      setError("Could not update item.");
+      return;
+    }
     const next = await res.json();
     setItems((prev) => prev.map((i) => (i.id === item.id ? next : i)));
   }
 
   async function setMeal(item: Item, mealType: string | null) {
+    setError(null);
     const res = await fetch(`/api/lists/items/${item.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ mealType }),
     });
-    if (!res.ok) return;
+    if (!res.ok) {
+      setError("Could not update meal.");
+      return;
+    }
     const next = await res.json();
     setItems((prev) => prev.map((i) => (i.id === item.id ? next : i)));
   }
 
+  async function setQuantity(item: Item, quantity: number) {
+    if (!Number.isFinite(quantity) || quantity <= 0) return;
+    setError(null);
+    const res = await fetch(`/api/lists/items/${item.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ quantity }),
+    });
+    if (!res.ok) {
+      setError("Could not update quantity.");
+      return;
+    }
+    const next = await res.json();
+    setItems((prev) => prev.map((i) => (i.id === item.id ? next : i)));
+    router.refresh();
+  }
+
   async function remove(item: Item) {
-    await fetch(`/api/lists/items/${item.id}`, { method: "DELETE" });
+    setError(null);
+    const res = await fetch(`/api/lists/items/${item.id}`, { method: "DELETE" });
+    if (!res.ok) {
+      setError("Could not remove item.");
+      return;
+    }
     setItems((prev) => prev.filter((i) => i.id !== item.id));
     router.refresh();
   }
 
   async function addProduct() {
-    if (!productId) return;
+    if (!selectedProductId) return;
     setBusy(true);
-    const res = await fetch(`/api/lists/${listId}/items`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ productId }),
-    });
-    setBusy(false);
-    if (!res.ok) return;
-    const item = await res.json();
-    setItems((prev) => [...prev, item]);
-    router.refresh();
+    setError(null);
+    try {
+      const res = await fetch(`/api/lists/${listId}/items`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ productId: selectedProductId }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error ?? "Could not add product");
+      setItems((prev) => [...prev, data]);
+      setQuery("");
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not add product");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function clearChecked() {
+    const checked = items.filter((i) => i.checked);
+    if (!checked.length) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await Promise.all(
+        checked.map((item) =>
+          fetch(`/api/lists/items/${item.id}`, { method: "DELETE" }),
+        ),
+      );
+      setItems((prev) => prev.filter((i) => !i.checked));
+      router.refresh();
+    } catch {
+      setError("Could not clear checked items.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
     <div className="space-y-6">
-      <p className="text-tj-muted">
-        Estimated from receipt averages:{" "}
-        <span className="font-semibold text-tj-ink">${estimate.toFixed(2)}</span>
-      </p>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-tj-muted">
+          Estimated from receipt averages:{" "}
+          <span className="font-semibold text-tj-ink">${liveEstimate.toFixed(2)}</span>
+        </p>
+        <button
+          type="button"
+          className="btn btn-secondary text-sm"
+          disabled={busy || !items.some((i) => i.checked)}
+          onClick={() => void clearChecked()}
+        >
+          Clear checked
+        </button>
+      </div>
 
       <div className="flex flex-wrap gap-2 items-end">
-        <label className="text-sm flex-1 min-w-[200px]">
+        <label className="text-sm flex-1 min-w-[160px]">
+          Search products
+          <input
+            className="input mt-1"
+            value={query}
+            onChange={(e) => {
+              setQuery(e.target.value);
+              setProductId("");
+            }}
+            placeholder="Type to filter…"
+          />
+        </label>
+        <label className="text-sm flex-[2] min-w-[200px]">
           Add product
           <select
             className="select mt-1"
-            value={productId}
+            value={selectedProductId}
             onChange={(e) => setProductId(e.target.value)}
           >
-            {products
-              .filter((p) => p.status === "ACTIVE")
-              .map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
+            {!filteredProducts.length && <option value="">No matches</option>}
+            {filteredProducts.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
           </select>
         </label>
-        <button type="button" className="btn btn-primary" disabled={busy} onClick={() => void addProduct()}>
+        <button
+          type="button"
+          className="btn btn-primary"
+          disabled={busy || !selectedProductId}
+          onClick={() => void addProduct()}
+        >
           Add
         </button>
       </div>
+
+      {error && (
+        <p className="text-sm text-tj-red" role="alert">
+          {error}
+        </p>
+      )}
 
       {grouped.map((group) => (
         <section key={String(group.meal)}>
@@ -133,25 +245,41 @@ export function ListDetailClient({
                 key={item.id}
                 className="flex flex-wrap items-center gap-3 border-b border-black/8 py-2"
               >
-                <input
-                  type="checkbox"
-                  checked={item.checked}
-                  onChange={() => void toggle(item)}
-                />
+                <label className="inline-flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={item.checked}
+                    onChange={() => void toggle(item)}
+                    aria-label={`Mark ${item.product.name} checked`}
+                  />
+                </label>
                 <Link
                   href={`/products/${item.productId}`}
-                  className={`flex-1 font-medium hover:text-tj-red ${
+                  className={`flex-1 min-w-[8rem] font-medium hover:text-tj-red ${
                     item.checked ? "line-through text-tj-muted" : ""
                   }`}
                 >
                   {item.product.name}
                 </Link>
+                <label className="text-xs text-tj-muted">
+                  Qty
+                  <input
+                    type="number"
+                    min={0.1}
+                    step={0.5}
+                    className="input mt-0.5 w-20"
+                    defaultValue={item.quantity}
+                    onBlur={(e) => {
+                      const q = Number(e.target.value);
+                      if (q !== item.quantity) void setQuantity(item, q);
+                    }}
+                  />
+                </label>
                 <select
                   className="select w-auto"
+                  aria-label={`Meal for ${item.product.name}`}
                   value={item.mealType ?? ""}
-                  onChange={(e) =>
-                    void setMeal(item, e.target.value || null)
-                  }
+                  onChange={(e) => void setMeal(item, e.target.value || null)}
                 >
                   <option value="">Unassigned</option>
                   <option value="BREAKFAST">Breakfast</option>
