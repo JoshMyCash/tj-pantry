@@ -36,3 +36,7 @@ export function requireDatabaseUrl(): string {
   process.env.DATABASE_URL = url;
   return url;
 }
+
+export function isDatabaseConfigured(): boolean {
+  return Boolean(resolveDatabaseUrl());
+}
