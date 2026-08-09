@@ -1,5 +1,9 @@
 import { format } from "date-fns";
-import type { CrowdLevel, MealType, ProductStatus } from "@/generated/prisma/client";
+import type {
+  CrowdLevel,
+  MealType,
+  ProductStatus,
+} from "../../generated/prisma/client";
 
 export function money(n: number | null | undefined) {
   return new Intl.NumberFormat("en-US", {
