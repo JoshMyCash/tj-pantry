@@ -1,17 +1,28 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { money, fmtDate } from "@/lib/format";
-import { ReceiptImport } from "@/components/ReceiptImport";
+import { ReceiptImportLazy } from "@/components/ReceiptImportLazy";
 
 export const dynamic = "force-dynamic";
 
 export default async function ReceiptsPage() {
   const [receipts, locations] = await Promise.all([
     prisma.receipt.findMany({
-      include: { location: true, items: true },
+      select: {
+        id: true,
+        purchasedAt: true,
+        source: true,
+        total: true,
+        location: { select: { name: true } },
+        _count: { select: { items: true } },
+      },
       orderBy: { purchasedAt: "desc" },
+      take: 50,
     }),
-    prisma.location.findMany({ orderBy: { name: "asc" } }),
+    prisma.location.findMany({
+      select: { id: true, name: true },
+      orderBy: { name: "asc" },
+    }),
   ]);
 
   return (
@@ -28,7 +39,7 @@ export default async function ReceiptsPage() {
         </p>
       </header>
 
-      <ReceiptImport locations={locations} />
+      <ReceiptImportLazy locations={locations} />
 
       <section className="animate-rise-delay">
         <h2 className="font-[family-name:var(--font-display)] text-2xl mb-3">
@@ -45,7 +56,7 @@ export default async function ReceiptsPage() {
                   <p className="font-semibold">{fmtDate(r.purchasedAt)}</p>
                   <p className="text-sm text-tj-muted">
                     {r.location?.name ?? "Unknown store"} · {r.source} ·{" "}
-                    {r.items.length} items
+                    {r._count.items} items
                   </p>
                 </div>
                 <p className="text-lg font-semibold">{money(r.total)}</p>

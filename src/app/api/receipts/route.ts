@@ -61,21 +61,22 @@ export async function POST(req: Request) {
   }
 
   const link = body.linkProducts !== false;
-  const createdItems = [];
-  for (const item of items) {
-    let productId = item.productId ?? null;
-    if (link && !productId) {
-      const product = await findOrCreateProduct(item.rawName);
-      productId = product.id;
-    }
-    createdItems.push({
-      rawName: item.rawName,
-      quantity: item.quantity,
-      unitPrice: item.unitPrice,
-      totalPrice: item.totalPrice,
-      productId,
-    });
-  }
+  const createdItems = await Promise.all(
+    items.map(async (item) => {
+      let productId = item.productId ?? null;
+      if (link && !productId) {
+        const product = await findOrCreateProduct(item.rawName);
+        productId = product.id;
+      }
+      return {
+        rawName: item.rawName,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        totalPrice: item.totalPrice,
+        productId,
+      };
+    }),
+  );
 
   const receipt = await prisma.receipt.create({
     data: {

@@ -1,4 +1,5 @@
 import { LoginForm } from "@/components/LoginForm";
+import { safeNextPath } from "@/lib/safe-next-path";
 
 export const dynamic = "force-dynamic";
 
@@ -8,10 +9,7 @@ export default async function LoginPage({
   searchParams: Promise<{ next?: string }>;
 }) {
   const params = await searchParams;
-  const nextPath =
-    typeof params.next === "string" && params.next.startsWith("/")
-      ? params.next
-      : "/";
+  const nextPath = safeNextPath(params.next);
 
   return (
     <div className="flex min-h-[70vh] items-center justify-center">
@@ -36,7 +34,7 @@ export default async function LoginPage({
             Sign in to your pantry
           </h1>
           <p className="mt-2 text-sm text-white/65 animate-rise-delay">
-            Each household member can use their own account.
+            Use your account to open receipts, lists, and ratings.
           </p>
           <LoginForm nextPath={nextPath} />
         </div>

@@ -5,22 +5,33 @@ import { ListsClient } from "@/components/ListsClient";
 export const dynamic = "force-dynamic";
 
 export default async function ListsPage() {
-  const [lists, locations] = await Promise.all([
+  const [lists, locations, averages] = await Promise.all([
     prisma.groceryList.findMany({
       include: {
-        location: true,
-        items: true,
+        location: { select: { id: true, name: true } },
+        items: { select: { productId: true, quantity: true } },
       },
       orderBy: { updatedAt: "desc" },
     }),
-    prisma.location.findMany({ orderBy: { name: "asc" } }),
+    prisma.location.findMany({
+      select: { id: true, name: true },
+      orderBy: { name: "asc" },
+    }),
+    averagePricesByProduct(),
   ]);
-  const averages = await averagePricesByProduct();
+
   const withEstimate = lists.map((list) => ({
-    ...list,
+    id: list.id,
+    name: list.name,
+    notes: list.notes,
+    location: list.location,
+    itemCount: list.items.length,
     estimate: Number(
       list.items
-        .reduce((s, item) => s + (averages.get(item.productId) ?? 0) * item.quantity, 0)
+        .reduce(
+          (s, item) => s + (averages.get(item.productId) ?? 0) * item.quantity,
+          0,
+        )
         .toFixed(2),
     ),
   }));

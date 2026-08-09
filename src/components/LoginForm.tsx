@@ -1,10 +1,9 @@
 "use client";
 
 import { FormEvent, useState } from "react";
-import { useRouter } from "next/navigation";
+import { safeNextPath } from "@/lib/safe-next-path";
 
 export function LoginForm({ nextPath = "/" }: { nextPath?: string }) {
-  const router = useRouter();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -23,13 +22,13 @@ export function LoginForm({ nextPath = "/" }: { nextPath?: string }) {
       const data = (await res.json().catch(() => ({}))) as { error?: string };
       if (!res.ok) {
         setError(data.error ?? "Could not sign in.");
+        setPending(false);
         return;
       }
-      router.replace(nextPath.startsWith("/") ? nextPath : "/");
-      router.refresh();
+      // Hard navigate so the session cookie is applied immediately.
+      window.location.assign(safeNextPath(nextPath));
     } catch {
       setError("Could not reach the server.");
-    } finally {
       setPending(false);
     }
   }

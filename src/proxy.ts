@@ -67,7 +67,13 @@ function redirectToLogin(request: NextRequest) {
   }
   const loginUrl = new URL("/login", request.url);
   const next = `${pathname}${request.nextUrl.search}`;
-  if (next && next !== "/") {
+  if (
+    next &&
+    next !== "/" &&
+    next.startsWith("/") &&
+    !next.startsWith("//") &&
+    !next.includes("://")
+  ) {
     loginUrl.searchParams.set("next", next);
   }
   return NextResponse.redirect(loginUrl);

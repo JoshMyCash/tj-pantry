@@ -20,8 +20,11 @@ export function ProductFilters() {
   }
 
   return (
-    <form onSubmit={onSubmit} className="surface rounded-2xl p-4 grid gap-3 sm:grid-cols-6 items-end">
-      <label className="sm:col-span-2 text-sm">
+    <form
+      onSubmit={onSubmit}
+      className="surface rounded-2xl p-4 grid gap-3 sm:grid-cols-3 lg:grid-cols-6 items-end"
+    >
+      <label className="sm:col-span-2 lg:col-span-2 text-sm">
         Search
         <input
           name="q"
@@ -57,7 +60,14 @@ export function ProductFilters() {
           <option value="1">Liked only</option>
         </select>
       </label>
-      <button type="submit" className="btn btn-secondary" disabled={pending}>
+      <label className="text-sm">
+        Tried
+        <select name="tried" defaultValue={sp.get("tried") ?? ""} className="select mt-1">
+          <option value="">Any</option>
+          <option value="1">Tried only</option>
+        </select>
+      </label>
+      <button type="submit" className="btn btn-secondary lg:col-span-6 sm:col-span-3" disabled={pending}>
         {pending ? "Filtering…" : "Filter"}
       </button>
     </form>

@@ -35,34 +35,47 @@ function crowdLabel(c: CrowdReport["level"]) {
 export function LocationsClient({ locations }: { locations: Location[] }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   async function createLocation(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setBusy(true);
+    setError(null);
+    setNotice(null);
     const fd = new FormData(e.currentTarget);
-    await fetch("/api/locations", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name: String(fd.get("name")),
-        address: String(fd.get("address")),
-        city: String(fd.get("city")),
-        state: String(fd.get("state")),
-        zip: String(fd.get("zip")),
-        hours: String(fd.get("hours") ?? ""),
-        restockingTimes: String(fd.get("restockingTimes") ?? ""),
-        typicalCrowd: String(fd.get("typicalCrowd") || "MODERATE"),
-        crowdNotes: String(fd.get("crowdNotes") ?? ""),
-        notes: String(fd.get("notes") ?? ""),
-      }),
-    });
-    setBusy(false);
-    e.currentTarget.reset();
-    router.refresh();
+    try {
+      const res = await fetch("/api/locations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: String(fd.get("name")),
+          address: String(fd.get("address")),
+          city: String(fd.get("city")),
+          state: String(fd.get("state")),
+          zip: String(fd.get("zip")),
+          hours: String(fd.get("hours") ?? ""),
+          restockingTimes: String(fd.get("restockingTimes") ?? ""),
+          typicalCrowd: String(fd.get("typicalCrowd") || "MODERATE"),
+          crowdNotes: String(fd.get("crowdNotes") ?? ""),
+          notes: String(fd.get("notes") ?? ""),
+        }),
+      });
+      if (!res.ok) throw new Error("Could not add store");
+      e.currentTarget.reset();
+      setNotice("Store added.");
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not add store");
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function saveLocation(id: string, fd: FormData) {
-    await fetch(`/api/locations/${id}`, {
+    setError(null);
+    setNotice(null);
+    const res = await fetch(`/api/locations/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -73,15 +86,27 @@ export function LocationsClient({ locations }: { locations: Location[] }) {
         notes: String(fd.get("notes") ?? ""),
       }),
     });
+    if (!res.ok) {
+      setError("Could not save store details.");
+      return;
+    }
+    setNotice("Store details saved.");
     router.refresh();
   }
 
   async function reportCrowd(id: string, level: CrowdReport["level"]) {
-    await fetch(`/api/locations/${id}/crowd`, {
+    setError(null);
+    setNotice(null);
+    const res = await fetch(`/api/locations/${id}/crowd`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ level }),
     });
+    if (!res.ok) {
+      setError("Could not log crowd level.");
+      return;
+    }
+    setNotice(`Logged ${crowdLabel(level)} crowd.`);
     router.refresh();
   }
 
@@ -134,6 +159,14 @@ export function LocationsClient({ locations }: { locations: Location[] }) {
           Crowd notes
           <input name="crowdNotes" className="input mt-1" />
         </label>
+        {error && (
+          <p className="text-sm text-tj-red sm:col-span-2" role="alert">
+            {error}
+          </p>
+        )}
+        {notice && !error && (
+          <p className="text-sm text-tj-leaf sm:col-span-2">{notice}</p>
+        )}
         <button type="submit" className="btn btn-primary sm:col-span-2" disabled={busy}>
           {busy ? "Saving…" : "Add location"}
         </button>
