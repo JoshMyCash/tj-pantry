@@ -125,6 +125,54 @@ button:focus-visible {
   border: 0;
 }
 
+.skip-link {
+  position: absolute;
+  left: 1rem;
+  top: 1rem;
+  z-index: 100;
+  transform: translateY(-150%);
+  border-radius: 0.65rem;
+  background: white;
+  padding: 0.65rem 1rem;
+  font-weight: 600;
+  box-shadow: 0 8px 20px rgba(28, 36, 48, 0.16);
+}
+
+.skip-link:focus {
+  transform: translateY(0);
+}
+
+@media print {
+  header,
+  .print\:hidden,
+  .skip-link,
+  .list-chrome button,
+  nav {
+    display: none !important;
+  }
+
+  body {
+    background: white !important;
+  }
+
+  body::before {
+    display: none !important;
+  }
+
+  main {
+    max-width: none !important;
+    padding: 0 !important;
+  }
+
+  .list-chrome {
+    position: static !important;
+    background: transparent !important;
+    border: 0 !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+}
+
 .surface {
   background: var(--surface);
   border: 1px solid rgba(28, 36, 48, 0.08);

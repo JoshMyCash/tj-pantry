@@ -46,6 +46,23 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
-  await prisma.location.delete({ where: { id } });
-  return NextResponse.json({ ok: true });
+  try {
+    await prisma.$transaction([
+      prisma.receipt.updateMany({
+        where: { locationId: id },
+        data: { locationId: null },
+      }),
+      prisma.groceryList.updateMany({
+        where: { locationId: id },
+        data: { locationId: null },
+      }),
+      prisma.location.delete({ where: { id } }),
+    ]);
+    return NextResponse.json({ ok: true });
+  } catch {
+    return NextResponse.json(
+      { error: "Could not delete store." },
+      { status: 409 },
+    );
+  }
 }

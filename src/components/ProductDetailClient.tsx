@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { StarRating } from "@/components/StarRating";
+import { useToast } from "@/components/Toast";
 
 type Product = {
   id: string;
@@ -22,6 +23,7 @@ type Product = {
 
 export function ProductDetailClient({ product }: { product: Product }) {
   const router = useRouter();
+  const toast = useToast();
   const [p, setP] = useState(product);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
@@ -43,6 +45,7 @@ export function ProductDetailClient({ product }: { product: Product }) {
     } catch (e) {
       setMsgTone("err");
       setMsg(e instanceof Error ? e.message : "Error");
+      toast.error(e instanceof Error ? e.message : "Update failed");
     } finally {
       setBusy(false);
     }
@@ -58,11 +61,34 @@ export function ProductDetailClient({ product }: { product: Product }) {
       setP(data.product);
       setMsgTone("ok");
       setMsg("Pulled image & calories from Open Food Facts");
+      toast.success("Found image & calories");
       router.refresh();
     } catch (e) {
       setMsgTone("err");
       setMsg(e instanceof Error ? e.message : "Error");
+      toast.error(e instanceof Error ? e.message : "Enrich failed");
     } finally {
+      setBusy(false);
+    }
+  }
+
+  async function deleteProduct() {
+    if (!window.confirm(`Delete “${p.name}”? This can’t be undone.`)) return;
+    setBusy(true);
+    try {
+      const res = await fetch(`/api/products/${p.id}`, { method: "DELETE" });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(
+          data.error ??
+            "Could not delete — it may still be on a list or receipt. Archive instead.",
+        );
+      }
+      toast.success("Product deleted");
+      router.push("/products");
+      router.refresh();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Delete failed");
       setBusy(false);
     }
   }
@@ -204,6 +230,14 @@ export function ProductDetailClient({ product }: { product: Product }) {
             Open Food Facts code: {p.openFoodFactsId}
           </p>
         )}
+        <button
+          type="button"
+          className="btn btn-secondary text-tj-red border-tj-red/30 sm:col-span-2"
+          disabled={busy}
+          onClick={() => void deleteProduct()}
+        >
+          Delete product
+        </button>
       </div>
     </div>
   );

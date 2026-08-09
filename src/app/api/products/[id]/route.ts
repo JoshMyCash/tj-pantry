@@ -55,6 +55,26 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
-  await prisma.product.delete({ where: { id } });
-  return NextResponse.json({ ok: true });
+  try {
+    const onLists = await prisma.groceryListItem.count({ where: { productId: id } });
+    if (onLists > 0) {
+      return NextResponse.json(
+        {
+          error: `This product is on ${onLists} list item${onLists === 1 ? "" : "s"}. Remove it from lists or archive instead.`,
+        },
+        { status: 409 },
+      );
+    }
+    await prisma.receiptItem.updateMany({
+      where: { productId: id },
+      data: { productId: null },
+    });
+    await prisma.product.delete({ where: { id } });
+    return NextResponse.json({ ok: true });
+  } catch {
+    return NextResponse.json(
+      { error: "Could not delete product. Try archiving it instead." },
+      { status: 409 },
+    );
+  }
 }

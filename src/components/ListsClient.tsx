@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useToast } from "@/components/Toast";
+import { EmptyState } from "@/components/EmptyState";
 
 type Location = { id: string; name: string };
 type List = {
@@ -22,6 +24,7 @@ export function ListsClient({
   locations: Location[];
 }) {
   const router = useRouter();
+  const toast = useToast();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -47,10 +50,13 @@ export function ListsClient({
         error?: string;
       };
       if (!res.ok) throw new Error(data.error ?? "Could not create list");
+      toast.success("List created");
       router.push(`/lists/${data.id}`);
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not create list");
+      const message = err instanceof Error ? err.message : "Could not create list";
+      setError(message);
+      toast.error(message);
       setBusy(false);
     }
   }
@@ -65,9 +71,12 @@ export function ListsClient({
         const data = (await res.json().catch(() => ({}))) as { error?: string };
         throw new Error(data.error ?? "Could not delete list");
       }
+      toast.success("List deleted");
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not delete list");
+      const message = err instanceof Error ? err.message : "Could not delete list";
+      setError(message);
+      toast.error(message);
     } finally {
       setDeletingId(null);
     }
@@ -134,10 +143,13 @@ export function ListsClient({
             </div>
           </li>
         ))}
-        {!lists.length && (
-          <li className="py-6 text-tj-muted">No lists yet — create one from your favorites.</li>
-        )}
       </ul>
+      {!lists.length && (
+        <EmptyState
+          title="No lists yet"
+          body="Create a weekly run pre-filled from liked & tried products."
+        />
+      )}
     </div>
   );
 }

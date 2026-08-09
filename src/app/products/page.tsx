@@ -5,6 +5,8 @@ import { averagePricesByProduct } from "@/lib/products";
 import { money, mealLabel, statusLabel, stars } from "@/lib/format";
 import { ProductFilters } from "@/components/ProductFilters";
 import { AddProductForm } from "@/components/AddProductForm";
+import { ProductRowActions } from "@/components/ProductRowActions";
+import { EmptyState } from "@/components/EmptyState";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +24,7 @@ export default async function ProductsPage({
   searchParams: Search;
 }) {
   const sp = await searchParams;
+  const hasFilters = Boolean(sp.q || sp.status || sp.meal || sp.liked || sp.tried);
   const [products, averages] = await Promise.all([
     prisma.product.findMany({
       where: {
@@ -75,12 +78,12 @@ export default async function ProductsPage({
 
       <ul className="divide-y divide-black/8 animate-rise-delay">
         {products.map((p) => (
-          <li key={p.id}>
-            <Link
-              href={`/products/${p.id}`}
-              className="flex flex-col gap-2 py-4 sm:flex-row sm:items-center sm:justify-between hover:bg-white/40 px-2 -mx-2 rounded-xl"
-            >
-              <div className="flex items-start gap-3 min-w-0">
+          <li key={p.id} className="py-4">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between px-2 -mx-2 rounded-xl hover:bg-white/40">
+              <Link
+                href={`/products/${p.id}`}
+                className="flex items-start gap-3 min-w-0 flex-1"
+              >
                 {p.imageUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
@@ -107,22 +110,35 @@ export default async function ProductsPage({
                     {statusLabel(p.status)}
                   </p>
                 </div>
+              </Link>
+              <div className="flex flex-col items-start sm:items-end gap-2 text-sm sm:shrink-0 px-2 sm:px-0">
+                <div className="flex items-center gap-4">
+                  <span className="text-tj-sun">{stars(p.rating)}</span>
+                  <span className="text-tj-muted">
+                    {averages.has(p.id) ? money(averages.get(p.id)) : "—"}
+                  </span>
+                  {p.liked && <span className="badge badge-red">Liked</span>}
+                  {!p.tried && <span className="badge">Untried</span>}
+                </div>
+                <ProductRowActions id={p.id} status={p.status} />
               </div>
-              <div className="flex items-center gap-4 text-sm sm:shrink-0">
-                <span className="text-tj-sun">{stars(p.rating)}</span>
-                <span className="text-tj-muted">
-                  {averages.has(p.id) ? money(averages.get(p.id)) : "—"}
-                </span>
-                {p.liked && <span className="badge badge-red">Liked</span>}
-                {!p.tried && <span className="badge">Untried</span>}
-              </div>
-            </Link>
+            </div>
           </li>
         ))}
-        {!products.length && (
-          <li className="py-8 text-tj-muted">No products match these filters.</li>
-        )}
       </ul>
+
+      {!products.length && (
+        <EmptyState
+          title={hasFilters ? "No matching products" : "No products yet"}
+          body={
+            hasFilters
+              ? "Try clearing filters or add something new from your latest receipt."
+              : "Import a receipt or add a product manually to start rating finds."
+          }
+          actionHref={hasFilters ? "/products" : "/receipts"}
+          actionLabel={hasFilters ? "Clear filters" : "Import a receipt"}
+        />
+      )}
     </div>
   );
 }
