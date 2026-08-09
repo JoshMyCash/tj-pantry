@@ -36,9 +36,12 @@ function readDatabaseUrl() {
   return value;
 }
 
-const token = requireEnv("VERCEL_TOKEN");
 const databaseUrl = readDatabaseUrl();
-const env = { ...process.env, VERCEL_TOKEN: token, TOKEN: token };
+const token = process.env.VERCEL_TOKEN?.trim();
+const env = token
+  ? { ...process.env, VERCEL_TOKEN: token, TOKEN: token }
+  : { ...process.env };
+const tokenArgs = token ? ["--token", token] : [];
 
 // Link to existing Vercel project if needed
 if (!existsSync(".vercel/project.json")) {
@@ -50,12 +53,11 @@ if (!existsSync(".vercel/project.json")) {
       "vercel",
       "link",
       "--yes",
-      "--token",
-      token,
       "--scope",
       "joshmycashs-projects",
       "--project",
       "tj-pantry",
+      ...tokenArgs,
     ],
     { env },
   );
@@ -66,12 +68,12 @@ for (const target of targets) {
   // Remove existing to allow update (ignore failure)
   spawnSync(
     "npx",
-    ["vercel", "env", "rm", "DATABASE_URL", target, "--yes", "--token", token],
+    ["vercel", "env", "rm", "DATABASE_URL", target, "--yes", ...tokenArgs],
     { encoding: "utf8", env, stdio: "pipe" },
   );
   run(
     "npx",
-    ["vercel", "env", "add", "DATABASE_URL", target, "--token", token],
+    ["vercel", "env", "add", "DATABASE_URL", target, ...tokenArgs],
     { env, input: `${databaseUrl}\n` },
   );
   console.log(`Set DATABASE_URL for ${target}`);
@@ -80,7 +82,7 @@ for (const target of targets) {
 // Trigger production deploy from current branch/dir
 const deployOut = run(
   "npx",
-  ["vercel", "deploy", "--prod", "--yes", "--token", token],
+  ["vercel", "deploy", "--prod", "--yes", ...tokenArgs],
   { env },
 );
 console.log("Deploy triggered.");
