@@ -2,9 +2,7 @@ import "dotenv/config";
 import { defineConfig } from "prisma/config";
 import { resolveDatabaseUrl } from "./src/lib/database-url";
 
-// Do not use env("DATABASE_URL") here — it throws while loading the config and
-// breaks `prisma generate` / Vercel postinstall when the var is unset.
-// migrate/seed still require a real URL (resolved below or skipped by vercel-build).
+// Soft resolve so `prisma generate` works when DATABASE_URL is absent (e.g. Vercel postinstall).
 export default defineConfig({
   schema: "prisma/schema.prisma",
   migrations: {
