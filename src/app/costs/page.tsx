@@ -31,7 +31,9 @@ export default async function CostsPage() {
 
   const totalSpent = aggregates._sum.total ?? 0;
   const avgTrip = aggregates._avg.total ?? 0;
-  const favoritesEstimate = favorites.reduce(
+  const tripCount = aggregates._count;
+  const pricedFavorites = favorites.filter((p) => averages.has(p.id));
+  const favoritesEstimate = pricedFavorites.reduce(
     (s, p) => s + (averages.get(p.id) ?? 0),
     0,
   );
@@ -58,8 +60,16 @@ export default async function CostsPage() {
 
       <section className="grid gap-6 sm:grid-cols-3 animate-rise-delay">
         <Stat label="All-time spend" value={money(totalSpent)} />
-        <Stat label="Average trip" value={money(avgTrip)} />
-        <Stat label="Favorites run estimate" value={money(favoritesEstimate)} />
+        <Stat
+          label="Average trip"
+          value={money(avgTrip)}
+          hint={tripCount ? `Across ${tripCount} trip${tripCount === 1 ? "" : "s"}` : "No trips yet"}
+        />
+        <Stat
+          label="Favorites run estimate"
+          value={money(favoritesEstimate)}
+          hint={`Priced ${pricedFavorites.length}/${favorites.length} from receipt averages`}
+        />
       </section>
 
       <section>
@@ -85,6 +95,9 @@ export default async function CostsPage() {
         <h2 className="font-[family-name:var(--font-display)] text-2xl mb-3">
           Favorites priced from receipts
         </h2>
+        <p className="text-sm text-tj-muted mb-3">
+          Uses average unit price from receipt lines. Unpriced favorites are skipped in the run total.
+        </p>
         <ul className="divide-y divide-black/8">
           {favorites.map((p) => (
             <li key={p.id} className="flex justify-between py-2">
@@ -132,11 +145,20 @@ export default async function CostsPage() {
   );
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
+function Stat({
+  label,
+  value,
+  hint,
+}: {
+  label: string;
+  value: string;
+  hint?: string;
+}) {
   return (
     <div className="border-l-2 border-tj-red pl-4">
       <p className="text-sm text-tj-muted">{label}</p>
       <p className="font-[family-name:var(--font-display)] text-3xl mt-1">{value}</p>
+      {hint ? <p className="mt-1 text-xs text-tj-muted">{hint}</p> : null}
     </div>
   );
 }

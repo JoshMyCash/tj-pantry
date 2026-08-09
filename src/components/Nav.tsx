@@ -22,6 +22,15 @@ export function Nav({ displayName }: { displayName?: string | null }) {
     setOpen(false);
   }, [pathname]);
 
+  useEffect(() => {
+    if (!open) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpen(false);
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open]);
+
   if (pathname === "/login") {
     return (
       <header className="sticky top-0 z-40 border-b border-black/5 bg-[rgba(247,250,252,0.85)] backdrop-blur-md">

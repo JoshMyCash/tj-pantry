@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
-import { money, crowdLabel } from "@/lib/format";
+import { money, crowdLabel, fmtDate } from "@/lib/format";
 import { averagePricesByProduct } from "@/lib/products";
 import { DatabaseSetup } from "@/components/DatabaseSetup";
 import { isDatabaseConfigured } from "@/lib/database-url";
+import { EmptyState } from "@/components/EmptyState";
 
 export const dynamic = "force-dynamic";
 
@@ -27,18 +28,20 @@ export default async function HomePage() {
           select: {
             id: true,
             total: true,
+            purchasedAt: true,
             location: { select: { name: true } },
             _count: { select: { items: true } },
           },
         }),
         prisma.location.findMany({ take: 3, orderBy: { name: "asc" } }),
         prisma.groceryList.findMany({
-          take: 2,
+          take: 3,
           orderBy: { updatedAt: "desc" },
           select: {
             id: true,
             name: true,
-            _count: { select: { items: true } },
+            updatedAt: true,
+            items: { select: { checked: true } },
           },
         }),
         averagePricesByProduct(),
@@ -48,42 +51,42 @@ export default async function HomePage() {
       (s, p) => s + (averages.get(p.id) ?? 0),
       0,
     );
-    const spent = receipts.reduce((s, r) => s + r.total, 0);
+    const lastThreeSpend = receipts.reduce((s, r) => s + r.total, 0);
+    const continueList = lists[0] ?? null;
+    const unchecked = continueList
+      ? continueList.items.filter((i) => !i.checked).length
+      : 0;
 
     return (
-      <div className="space-y-14">
-        <section className="relative overflow-hidden rounded-none min-h-[70vh] flex flex-col justify-end pb-10 pt-16">
+      <div className="space-y-12">
+        <section className="relative overflow-hidden rounded-none min-h-[42vh] flex flex-col justify-end pb-8 pt-12">
           <div
             className="pointer-events-none absolute inset-0 -mx-4 bg-[radial-gradient(ellipse_at_70%_20%,rgba(200,16,46,0.18),transparent_55%),linear-gradient(135deg,#1c2430_0%,#2f6b4f_55%,#c8102e_120%)]"
             aria-hidden
           />
-          <div
-            className="pointer-events-none absolute inset-0 -mx-4 opacity-40 mix-blend-overlay"
-            style={{
-              backgroundImage:
-                "url(\"data:image/svg+xml,%3Csvg width='160' height='160' viewBox='0 0 160 160' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 80h160M80 0v160' stroke='%23fff' stroke-opacity='.08' stroke-width='1'/%3E%3C/svg%3E\")",
-            }}
-            aria-hidden
-          />
           <div className="relative z-10 max-w-2xl text-white px-1 animate-rise">
-            <p className="brand-mark font-[family-name:var(--font-display)] text-5xl sm:text-7xl leading-[0.95] tracking-tight">
+            <p className="brand-mark font-[family-name:var(--font-display)] text-4xl sm:text-6xl leading-[0.95] tracking-tight">
               TJ Pantry
             </p>
-            <h1 className="mt-5 text-xl sm:text-2xl font-medium text-white/90 max-w-lg animate-rise-delay">
-              Your Trader Joe’s finds, ratings, and regular run — in one place.
+            <h1 className="mt-4 text-lg sm:text-xl font-medium text-white/90 max-w-lg animate-rise-delay">
+              Pick up where you left off — lists, receipts, and ratings.
             </h1>
-            <p className="mt-3 text-white/70 max-w-md animate-rise-delay">
-              Import receipts, enrich calories from Open Food Facts, and build lists from what you actually like.
-            </p>
-            <div className="mt-8 flex flex-wrap gap-3 animate-rise-delay-2">
-              <Link href="/receipts" className="btn btn-primary">
-                Import a receipt
-              </Link>
+            <div className="mt-6 flex flex-wrap gap-3 animate-rise-delay-2">
+              {continueList ? (
+                <Link href={`/lists/${continueList.id}`} className="btn btn-primary">
+                  Continue “{continueList.name}”
+                  {unchecked ? ` (${unchecked} left)` : ""}
+                </Link>
+              ) : (
+                <Link href="/lists" className="btn btn-primary">
+                  Make a list
+                </Link>
+              )}
               <Link
-                href="/products"
+                href="/receipts"
                 className="btn bg-white/10 text-white border border-white/30 hover:bg-white/20"
               >
-                Browse products
+                Import a receipt
               </Link>
             </div>
           </div>
@@ -91,21 +94,59 @@ export default async function HomePage() {
 
         <section className="grid gap-6 sm:grid-cols-3 animate-rise">
           <Stat label="Active products" value={String(productCount)} />
-          <Stat label="Recent trip spend" value={money(spent)} />
-          <Stat
-            label="Favorites run estimate"
-            value={money(favoritesEstimate)}
-          />
+          <Stat label="Last 3 trips" value={money(lastThreeSpend)} />
+          <Stat label="Favorites run estimate" value={money(favoritesEstimate)} />
         </section>
 
-        <section className="grid gap-10 lg:grid-cols-2">
+        <section className="grid gap-8 lg:grid-cols-2">
+          <div>
+            <div className="mb-4 flex items-end justify-between">
+              <h2 className="font-[family-name:var(--font-display)] text-3xl text-tj-ink">
+                Active lists
+              </h2>
+              <Link href="/lists" className="text-sm font-semibold text-tj-red">
+                All lists →
+              </Link>
+            </div>
+            {lists.length ? (
+              <ul className="space-y-3">
+                {lists.map((list) => {
+                  const left = list.items.filter((i) => !i.checked).length;
+                  return (
+                    <li key={list.id}>
+                      <Link
+                        href={`/lists/${list.id}`}
+                        className="surface flex items-center justify-between rounded-2xl p-4 transition hover:-translate-y-0.5"
+                      >
+                        <div>
+                          <p className="font-semibold">{list.name}</p>
+                          <p className="text-sm text-tj-muted">
+                            {left} unchecked · {list.items.length} total
+                          </p>
+                        </div>
+                        <span className="text-sm font-semibold text-tj-red">Open →</span>
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : (
+              <EmptyState
+                title="No lists yet"
+                body="Build a weekly run from liked & tried products."
+                actionHref="/lists"
+                actionLabel="Create a list"
+              />
+            )}
+          </div>
+
           <div>
             <div className="mb-4 flex items-end justify-between">
               <h2 className="font-[family-name:var(--font-display)] text-3xl text-tj-ink">
                 Liked & tried
               </h2>
-              <Link href="/lists" className="text-sm font-semibold text-tj-red">
-                Make a list →
+              <Link href="/products?liked=1&tried=1" className="text-sm font-semibold text-tj-red">
+                Browse →
               </Link>
             </div>
             <ul className="space-y-3">
@@ -123,9 +164,50 @@ export default async function HomePage() {
                 </li>
               ))}
               {!liked.length && (
-                <p className="text-tj-muted">Rate a few products to fill this in.</p>
+                <EmptyState
+                  title="No favorites yet"
+                  body="Mark products tried & liked to fill this list."
+                  actionHref="/products"
+                  actionLabel="Browse products"
+                />
               )}
             </ul>
+          </div>
+        </section>
+
+        <section className="grid gap-10 lg:grid-cols-2">
+          <div>
+            <div className="mb-4 flex items-end justify-between">
+              <h2 className="font-[family-name:var(--font-display)] text-3xl">
+                Latest receipts
+              </h2>
+              <Link href="/receipts" className="text-sm font-semibold text-tj-red">
+                Import →
+              </Link>
+            </div>
+            <div className="grid gap-3">
+              {receipts.map((r) => (
+                <Link
+                  key={r.id}
+                  href={`/receipts/${r.id}`}
+                  className="surface rounded-2xl p-4 transition hover:-translate-y-0.5"
+                >
+                  <p className="text-sm text-tj-muted">
+                    {fmtDate(r.purchasedAt)} · {r.location?.name ?? "Unknown store"}
+                  </p>
+                  <p className="mt-1 text-2xl font-semibold">{money(r.total)}</p>
+                  <p className="text-sm text-tj-muted">{r._count.items} items</p>
+                </Link>
+              ))}
+              {!receipts.length && (
+                <EmptyState
+                  title="No receipts yet"
+                  body="Import one to start estimating costs from real prices."
+                  actionHref="/receipts"
+                  actionLabel="Import a receipt"
+                />
+              )}
+            </div>
           </div>
 
           <div>
@@ -148,42 +230,16 @@ export default async function HomePage() {
                   </p>
                 </li>
               ))}
+              {!locations.length && (
+                <EmptyState
+                  title="No stores yet"
+                  body="Add your usual Trader Joe’s for hours and crowd notes."
+                  actionHref="/locations"
+                  actionLabel="Add a store"
+                />
+              )}
             </ul>
           </div>
-        </section>
-
-        <section>
-          <div className="mb-4 flex items-end justify-between">
-            <h2 className="font-[family-name:var(--font-display)] text-3xl">
-              Latest receipts
-            </h2>
-            <Link href="/costs" className="text-sm font-semibold text-tj-red">
-              Cost estimator →
-            </Link>
-          </div>
-          <div className="grid gap-4 sm:grid-cols-3">
-            {receipts.map((r) => (
-              <Link
-                key={r.id}
-                href={`/receipts/${r.id}`}
-                className="surface rounded-2xl p-4 transition hover:-translate-y-0.5"
-              >
-                <p className="text-sm text-tj-muted">
-                  {r.location?.name ?? "Unknown store"}
-                </p>
-                <p className="mt-1 text-2xl font-semibold">{money(r.total)}</p>
-                <p className="text-sm text-tj-muted">{r._count.items} items</p>
-              </Link>
-            ))}
-            {!receipts.length && (
-              <p className="text-tj-muted">No receipts yet — import one to start estimating costs.</p>
-            )}
-          </div>
-          {lists.length > 0 && (
-            <p className="mt-6 text-sm text-tj-muted">
-              Active lists: {lists.map((l) => l.name).join(" · ")} ({lists.reduce((s, l) => s + l._count.items, 0)} items)
-            </p>
-          )}
         </section>
       </div>
     );

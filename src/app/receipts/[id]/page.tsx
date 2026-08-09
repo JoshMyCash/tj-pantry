@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { money, fmtDate } from "@/lib/format";
+import { fmtDate } from "@/lib/format";
+import { ReceiptDetailClient } from "@/components/ReceiptDetailClient";
 
 export const dynamic = "force-dynamic";
 
@@ -11,13 +12,24 @@ export default async function ReceiptDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const receipt = await prisma.receipt.findUnique({
-    where: { id },
-    include: {
-      location: true,
-      items: { include: { product: true } },
-    },
-  });
+  const [receipt, locations, products] = await Promise.all([
+    prisma.receipt.findUnique({
+      where: { id },
+      include: {
+        location: true,
+        items: { include: { product: true } },
+      },
+    }),
+    prisma.location.findMany({
+      select: { id: true, name: true },
+      orderBy: { name: "asc" },
+    }),
+    prisma.product.findMany({
+      select: { id: true, name: true, status: true },
+      orderBy: { name: "asc" },
+      take: 500,
+    }),
+  ]);
   if (!receipt) notFound();
 
   return (
@@ -33,50 +45,14 @@ export default async function ReceiptDetailPage({
           {receipt.location?.name ?? "Unknown store"} · {receipt.source}
         </p>
       </header>
-
-      <ul className="divide-y divide-black/8">
-        {receipt.items.map((item) => (
-          <li key={item.id} className="flex justify-between gap-3 py-3">
-            <div>
-              {item.product ? (
-                <Link href={`/products/${item.productId}`} className="font-medium hover:text-tj-red">
-                  {item.product.name}
-                </Link>
-              ) : (
-                <span className="font-medium">{item.rawName}</span>
-              )}
-              <p className="text-sm text-tj-muted">
-                {item.quantity} × {money(item.unitPrice)}
-              </p>
-            </div>
-            <span className="font-semibold">{money(item.totalPrice)}</span>
-          </li>
-        ))}
-      </ul>
-
-      <div className="border-t border-black/10 pt-4 space-y-1 text-sm">
-        <div className="flex justify-between">
-          <span className="text-tj-muted">Subtotal</span>
-          <span>{money(receipt.subtotal)}</span>
-        </div>
-        <div className="flex justify-between">
-          <span className="text-tj-muted">Tax</span>
-          <span>{money(receipt.tax)}</span>
-        </div>
-        <div className="flex justify-between text-lg font-semibold pt-1">
-          <span>Total</span>
-          <span>{money(receipt.total)}</span>
-        </div>
-      </div>
-
-      {receipt.rawText && (
-        <details className="surface rounded-2xl p-4">
-          <summary className="cursor-pointer font-medium">Raw receipt text</summary>
-          <pre className="mt-3 whitespace-pre-wrap text-xs text-tj-muted font-mono">
-            {receipt.rawText}
-          </pre>
-        </details>
-      )}
+      <ReceiptDetailClient
+        receipt={{
+          ...receipt,
+          purchasedAt: receipt.purchasedAt.toISOString(),
+        }}
+        locations={locations}
+        products={products}
+      />
     </div>
   );
 }

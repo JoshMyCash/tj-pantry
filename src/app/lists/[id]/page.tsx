@@ -30,18 +30,11 @@ export default async function ListDetailPage({
   ]);
   if (!list) notFound();
 
-  const estimate = Number(
-    list.items
-      .reduce(
-        (s, item) => s + (averages.get(item.productId) ?? 0) * item.quantity,
-        0,
-      )
-      .toFixed(2),
-  );
+  const priceByProduct = Object.fromEntries(averages.entries());
 
   return (
     <div className="space-y-6 animate-rise">
-      <Link href="/lists" className="text-sm font-semibold text-tj-red">
+      <Link href="/lists" className="text-sm font-semibold text-tj-red print:hidden">
         ← Lists
       </Link>
       <header>
@@ -53,9 +46,10 @@ export default async function ListDetailPage({
       </header>
       <ListDetailClient
         listId={list.id}
+        listName={list.name}
         initialItems={list.items}
         products={products}
-        estimate={estimate}
+        priceByProduct={priceByProduct}
       />
     </div>
   );

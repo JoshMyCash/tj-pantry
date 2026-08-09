@@ -2,6 +2,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { money, fmtDate } from "@/lib/format";
 import { ReceiptImportLazy } from "@/components/ReceiptImportLazy";
+import { EmptyState } from "@/components/EmptyState";
 
 export const dynamic = "force-dynamic";
 
@@ -63,10 +64,13 @@ export default async function ReceiptsPage() {
               </Link>
             </li>
           ))}
-          {!receipts.length && (
-            <li className="py-6 text-tj-muted">No receipts imported yet.</li>
-          )}
         </ul>
+        {!receipts.length && (
+          <EmptyState
+            title="No receipts yet"
+            body="Paste text or upload a photo above — line items become products you can rate."
+          />
+        )}
       </section>
     </div>
   );

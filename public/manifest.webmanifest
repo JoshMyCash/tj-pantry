@@ -1,0 +1,16 @@
+{
+  "name": "TJ Pantry",
+  "short_name": "TJ Pantry",
+  "description": "Trader Joe's receipts, ratings, lists, and stores.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#eef2f5",
+  "theme_color": "#c8102e",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "48x48",
+      "type": "image/x-icon"
+    }
+  ]
+}

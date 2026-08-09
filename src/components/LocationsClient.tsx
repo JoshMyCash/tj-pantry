@@ -2,6 +2,7 @@
 
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useToast } from "@/components/Toast";
 
 type CrowdReport = {
   id: string;
@@ -34,6 +35,7 @@ function crowdLabel(c: CrowdReport["level"]) {
 
 export function LocationsClient({ locations }: { locations: Location[] }) {
   const router = useRouter();
+  const toast = useToast();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -64,9 +66,35 @@ export function LocationsClient({ locations }: { locations: Location[] }) {
       if (!res.ok) throw new Error("Could not add store");
       e.currentTarget.reset();
       setNotice("Store added.");
+      toast.success("Store added");
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not add store");
+      const message = err instanceof Error ? err.message : "Could not add store";
+      setError(message);
+      toast.error(message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function deleteLocation(id: string, name: string) {
+    if (!window.confirm(`Delete “${name}”? Receipts will keep their totals but lose this store link.`)) {
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/locations/${id}`, { method: "DELETE" });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error ?? "Could not delete store");
+      }
+      toast.success("Store deleted");
+      router.refresh();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Could not delete store";
+      setError(message);
+      toast.error(message);
     } finally {
       setBusy(false);
     }
@@ -175,11 +203,21 @@ export function LocationsClient({ locations }: { locations: Location[] }) {
       <div className="space-y-6">
         {locations.map((loc) => (
           <article key={loc.id} className="surface rounded-2xl p-5 space-y-4">
-            <div>
-              <h3 className="font-[family-name:var(--font-display)] text-2xl">{loc.name}</h3>
-              <p className="text-sm text-tj-muted mt-1">
-                {loc.address}, {loc.city}, {loc.state} {loc.zip}
-              </p>
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h3 className="font-[family-name:var(--font-display)] text-2xl">{loc.name}</h3>
+                <p className="text-sm text-tj-muted mt-1">
+                  {loc.address}, {loc.city}, {loc.state} {loc.zip}
+                </p>
+              </div>
+              <button
+                type="button"
+                className="text-xs font-semibold text-tj-red"
+                disabled={busy}
+                onClick={() => void deleteLocation(loc.id, loc.name)}
+              >
+                Delete store
+              </button>
             </div>
             <form
               className="grid gap-3 sm:grid-cols-2"
