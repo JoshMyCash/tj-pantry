@@ -3,14 +3,34 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { parseReceiptText } from "@/lib/receipt-parse";
 import { findOrCreateProduct } from "@/lib/products";
+import { revalidateAveragePrices } from "@/lib/revalidate-averages";
 
 export async function GET() {
   const receipts = await prisma.receipt.findMany({
-    include: {
-      location: true,
-      items: { include: { product: true } },
+    select: {
+      id: true,
+      purchasedAt: true,
+      subtotal: true,
+      tax: true,
+      total: true,
+      source: true,
+      notes: true,
+      locationId: true,
+      location: { select: { id: true, name: true } },
+      items: {
+        select: {
+          id: true,
+          rawName: true,
+          quantity: true,
+          unitPrice: true,
+          totalPrice: true,
+          productId: true,
+          product: { select: { id: true, name: true } },
+        },
+      },
     },
     orderBy: { purchasedAt: "desc" },
+    take: 50,
   });
   return NextResponse.json(receipts);
 }
@@ -27,6 +47,7 @@ const createSchema = z.object({
   locationId: z.string().nullable().optional(),
   purchasedAt: z.string().datetime().optional(),
   rawText: z.string().optional(),
+  // Accepted for API compat but never persisted (free-plan storage).
   imageData: z.string().nullable().optional(),
   source: z.enum(["OCR", "MANUAL"]).default("MANUAL"),
   subtotal: z.number().optional(),
@@ -83,7 +104,8 @@ export async function POST(req: Request) {
       locationId: body.locationId ?? null,
       purchasedAt: body.purchasedAt ? new Date(body.purchasedAt) : new Date(),
       rawText: body.rawText ?? "",
-      imageData: body.imageData ?? null,
+      // Never store base64 OCR images — OCR is client-side only.
+      imageData: null,
       source: body.source,
       subtotal,
       tax,
@@ -97,5 +119,6 @@ export async function POST(req: Request) {
     },
   });
 
+  revalidateAveragePrices();
   return NextResponse.json(receipt, { status: 201 });
 }

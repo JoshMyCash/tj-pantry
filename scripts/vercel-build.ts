@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { resolveDatabaseUrl } from "../src/lib/database-url";
+import { resolveMigrateDatabaseUrl } from "../src/lib/database-url";
 
 function run(command: string, args: string[]) {
   const result = spawnSync(command, args, {
@@ -14,7 +14,7 @@ function run(command: string, args: string[]) {
 
 run("npx", ["prisma", "generate"]);
 
-const databaseUrl = resolveDatabaseUrl();
+const databaseUrl = resolveMigrateDatabaseUrl();
 if (databaseUrl) {
   process.env.DATABASE_URL = databaseUrl;
   run("npx", ["prisma", "migrate", "deploy"]);

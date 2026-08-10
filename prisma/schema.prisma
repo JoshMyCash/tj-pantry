@@ -93,6 +93,7 @@ model Receipt {
   location    Location?     @relation(fields: [locationId], references: [id])
   purchasedAt DateTime      @default(now())
   rawText     String        @default("")
+  /// Deprecated: never store OCR images (burns free-plan storage). Kept nullable for old rows.
   imageData   String?
   subtotal    Float         @default(0)
   tax         Float         @default(0)
@@ -102,6 +103,8 @@ model Receipt {
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
   items       ReceiptItem[]
+
+  @@index([purchasedAt])
 }
 
 model ReceiptItem {
@@ -114,6 +117,9 @@ model ReceiptItem {
   quantity   Float    @default(1)
   unitPrice  Float    @default(0)
   totalPrice Float    @default(0)
+
+  @@index([receiptId])
+  @@index([productId])
 }
 
 model GroceryList {

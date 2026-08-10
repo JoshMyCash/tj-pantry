@@ -15,9 +15,28 @@ export default async function ReceiptDetailPage({
   const [receipt, locations, products] = await Promise.all([
     prisma.receipt.findUnique({
       where: { id },
-      include: {
-        location: true,
-        items: { include: { product: true } },
+      select: {
+        id: true,
+        locationId: true,
+        purchasedAt: true,
+        rawText: true,
+        subtotal: true,
+        tax: true,
+        total: true,
+        source: true,
+        notes: true,
+        location: { select: { id: true, name: true } },
+        items: {
+          select: {
+            id: true,
+            rawName: true,
+            quantity: true,
+            unitPrice: true,
+            totalPrice: true,
+            productId: true,
+            product: { select: { id: true, name: true, status: true } },
+          },
+        },
       },
     }),
     prisma.location.findMany({
