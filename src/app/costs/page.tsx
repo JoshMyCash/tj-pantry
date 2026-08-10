@@ -9,6 +9,7 @@ export default async function CostsPage() {
   const [receipts, favorites, averages, aggregates] = await Promise.all([
     prisma.receipt.findMany({
       orderBy: { purchasedAt: "desc" },
+      take: 200,
       select: {
         id: true,
         total: true,

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
+import { revalidateAveragePrices } from "@/lib/revalidate-averages";
 
 const patchSchema = z.object({
   productId: z.string().nullable().optional(),
@@ -29,6 +30,7 @@ export async function PATCH(
     data: body,
     include: { product: true },
   });
+  revalidateAveragePrices();
   return NextResponse.json(item);
 }
 
@@ -44,5 +46,6 @@ export async function DELETE(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
   await prisma.receiptItem.delete({ where: { id: itemId } });
+  revalidateAveragePrices();
   return NextResponse.json({ ok: true });
 }

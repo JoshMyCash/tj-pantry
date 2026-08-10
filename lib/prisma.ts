@@ -9,16 +9,23 @@ const globalForPrisma = globalThis as unknown as {
 
 function createPrismaClient() {
   const connectionString = requireDatabaseUrl();
-  const adapter = new PrismaPg({ connectionString });
+  // Serverless: one connection per warm isolate. Creating a client (or a large
+  // pool) per request burns Prisma Postgres free-plan connection limits.
+  const adapter = new PrismaPg({
+    connectionString,
+    max: 1,
+    // Recycle idle connections so free-tier pool slots are not held forever.
+    idleTimeoutMillis: 20_000,
+    connectionTimeoutMillis: 10_000,
+  });
   return new PrismaClient({ adapter });
 }
 
 function getPrismaClient() {
-  const client = globalForPrisma.prisma ?? createPrismaClient();
-  if (process.env.NODE_ENV !== "production") {
-    globalForPrisma.prisma = client;
+  if (!globalForPrisma.prisma) {
+    globalForPrisma.prisma = createPrismaClient();
   }
-  return client;
+  return globalForPrisma.prisma;
 }
 
 /** Lazy so importing modules does not require DATABASE_URL until a query runs. */

@@ -49,6 +49,22 @@ npx vercel env add DATABASE_URL production
 npx vercel --prod
 ```
 
+## Free-plan database limits (maximize usage)
+
+TJ Pantry is tuned for **Prisma Postgres Free** (and Neon free):
+
+| Cap | Prisma Postgres Free | How this app stays under it |
+| --- | --- | --- |
+| Operations | **100k / month** | Singleton Prisma client, `max: 1` pool, cached average-price aggregate, lean selects / `take` caps |
+| Storage | **500 MB** | Never stores OCR images; clears old `imageData`; slim OFF nutrition JSON |
+| Connections | **~10 direct / ~10–50 pooled** | Runtime prefers **pooled** URL (`pooled.db.prisma.io` / Neon `*-pooler`); migrations use direct/unpooled when set |
+
+Tips:
+
+- Set **`DATABASE_URL`** to the **pooled** connection string for Vercel runtime (or set `DATABASE_URL_POOLED` / Neon’s `POSTGRES_PRISMA_URL`). Keep an unpooled URL as `DATABASE_URL_UNPOOLED` for migrate/seed if your host provides both.
+- Watch usage in the Prisma / Neon console — ops spike from page refreshes that re-run aggregates; the average-price cache is the main guardrail.
+- Avoid pasting huge receipt photos into the API; OCR stays in the browser and only parsed text/items are saved.
+
 ## Features
 
 - **Receipts** — photo OCR or paste text; parse line items; link/create products

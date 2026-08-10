@@ -60,7 +60,14 @@ export async function searchOpenFoodFacts(
     imageUrl: p.image_front_url ?? p.image_url ?? null,
     calories: pickCalories(p),
     servingSize: p.serving_size ?? null,
-    nutritionJson: p.nutriments ? JSON.stringify(p.nutriments) : null,
+    // Store only calorie keys — full nutriments blobs burn free DB storage.
+    nutritionJson: p.nutriments
+      ? JSON.stringify({
+          "energy-kcal_serving": p.nutriments["energy-kcal_serving"],
+          "energy-kcal_100g": p.nutriments["energy-kcal_100g"],
+          "energy-kcal": p.nutriments["energy-kcal"],
+        })
+      : null,
   }));
 }
 

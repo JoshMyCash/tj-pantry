@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
+import { revalidateAveragePrices } from "@/lib/revalidate-averages";
 
 export async function GET(
   _req: Request,
@@ -9,9 +10,30 @@ export async function GET(
   const { id } = await params;
   const receipt = await prisma.receipt.findUnique({
     where: { id },
-    include: {
-      location: true,
-      items: { include: { product: true } },
+    select: {
+      id: true,
+      locationId: true,
+      purchasedAt: true,
+      rawText: true,
+      subtotal: true,
+      tax: true,
+      total: true,
+      source: true,
+      notes: true,
+      createdAt: true,
+      updatedAt: true,
+      location: { select: { id: true, name: true } },
+      items: {
+        select: {
+          id: true,
+          rawName: true,
+          quantity: true,
+          unitPrice: true,
+          totalPrice: true,
+          productId: true,
+          product: { select: { id: true, name: true, status: true } },
+        },
+      },
     },
   });
   if (!receipt) return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -57,5 +79,6 @@ export async function DELETE(
 ) {
   const { id } = await params;
   await prisma.receipt.delete({ where: { id } });
+  revalidateAveragePrices();
   return NextResponse.json({ ok: true });
 }
