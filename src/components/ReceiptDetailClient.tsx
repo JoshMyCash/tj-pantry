@@ -249,7 +249,7 @@ export function ReceiptDetailClient({
               {item.product && (
                 <button
                   type="button"
-                  className="btn btn-secondary text-xs py-1.5"
+                  className="btn btn-secondary text-xs py-1.5 text-tj-muted"
                   disabled={busy}
                   onClick={() => void linkItem(item.id, null)}
                 >
@@ -258,7 +258,7 @@ export function ReceiptDetailClient({
               )}
               <button
                 type="button"
-                className="text-xs font-semibold text-tj-red"
+                className="btn text-xs py-1.5 text-tj-red border border-tj-red/25 bg-tj-red/5 hover:bg-tj-red/10"
                 disabled={busy}
                 onClick={() => void removeItem(item.id)}
               >

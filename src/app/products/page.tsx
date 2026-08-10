@@ -79,7 +79,7 @@ export default async function ProductsPage({
       <ul className="divide-y divide-black/8 animate-rise-delay">
         {products.map((p) => (
           <li key={p.id} className="py-4">
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between px-2 -mx-2 rounded-xl hover:bg-white/40">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between px-2 -mx-2 rounded-xl transition hover:bg-white/70">
               <Link
                 href={`/products/${p.id}`}
                 className="flex items-start gap-3 min-w-0 flex-1"
@@ -96,7 +96,7 @@ export default async function ProductsPage({
                     className="h-14 w-14 rounded-lg object-cover bg-white"
                   />
                 ) : (
-                  <div className="h-14 w-14 rounded-lg bg-tj-mist/80 grid place-items-center text-xs text-tj-muted">
+                  <div className="grid h-14 w-14 place-items-center rounded-lg border border-dashed border-black/10 bg-gradient-to-br from-white to-tj-mist font-[family-name:var(--font-display)] text-sm text-tj-red/70">
                     TJ
                   </div>
                 )}

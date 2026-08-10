@@ -122,7 +122,7 @@ export function ListsClient({
         {lists.map((list) => (
           <li
             key={list.id}
-            className="flex flex-wrap items-center justify-between gap-2 py-3"
+            className="flex flex-wrap items-center justify-between gap-3 border-b border-black/8 py-3"
           >
             <Link href={`/lists/${list.id}`} className="min-w-0 flex-1 hover:text-tj-red">
               <p className="font-semibold">{list.name}</p>
@@ -130,11 +130,13 @@ export function ListsClient({
                 {list.location?.name ?? "Any store"} · {list.itemCount} items
               </p>
             </Link>
-            <div className="flex items-center gap-3">
-              <p className="font-semibold">~${list.estimate.toFixed(2)}</p>
+            <div className="flex items-center gap-4 shrink-0">
+              <p className="min-w-[4.5rem] text-right font-semibold tabular-nums">
+                ~${list.estimate.toFixed(2)}
+              </p>
               <button
                 type="button"
-                className="text-xs font-semibold text-tj-red"
+                className="inline-flex min-h-10 items-center rounded-lg px-2 text-xs font-semibold text-tj-red hover:bg-tj-red/5"
                 disabled={deletingId === list.id}
                 onClick={() => void deleteList(list.id, list.name)}
               >

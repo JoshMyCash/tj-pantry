@@ -240,7 +240,7 @@ export function ListDetailClient({
 
   return (
     <div className="space-y-6">
-      <div className="list-chrome sticky top-[3.25rem] z-30 -mx-4 border-b border-black/5 bg-[rgba(247,250,252,0.92)] px-4 py-3 backdrop-blur-md sm:top-[3.5rem]">
+      <div className="list-chrome sticky top-[3.6rem] z-30 -mx-4 border-b border-black/5 bg-[rgba(247,250,252,0.95)] px-4 py-3 backdrop-blur-md md:top-[3.75rem]">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="min-w-0">
             <p className="text-sm text-tj-muted">
@@ -269,7 +269,7 @@ export function ListDetailClient({
             </button>
           </div>
         </div>
-        <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-black/10">
+        <div className="mt-2.5 h-2.5 overflow-hidden rounded-full bg-black/10">
           <div
             className="h-full rounded-full bg-tj-leaf transition-[width] duration-300"
             style={{ width: `${Math.round(progress * 100)}%` }}
@@ -384,71 +384,75 @@ function ListRow({
   onRemove: () => void;
 }) {
   return (
-    <li className="flex flex-wrap items-center gap-3 border-b border-black/8 py-2">
-      <button
-        type="button"
-        onClick={onToggle}
-        className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg hover:bg-black/5"
-        aria-pressed={item.checked}
-        aria-label={`Mark ${item.product.name} ${item.checked ? "unchecked" : "checked"}`}
-      >
-        <input
-          type="checkbox"
-          checked={item.checked}
-          readOnly
-          tabIndex={-1}
-          className="pointer-events-none h-5 w-5"
-        />
-      </button>
-      <button
-        type="button"
-        onClick={onToggle}
-        className={`flex-1 min-w-[8rem] text-left font-medium ${
-          item.checked ? "line-through text-tj-muted" : "hover:text-tj-red"
-        }`}
-      >
-        {item.product.name}
-      </button>
-      <Link
-        href={`/products/${item.productId}`}
-        className="text-xs font-semibold text-tj-muted hover:text-tj-red print:hidden"
-      >
-        Details
-      </Link>
-      <label className="text-xs text-tj-muted print:hidden">
-        Qty
-        <input
-          type="number"
-          min={0.1}
-          step={0.5}
-          className="input mt-0.5 w-20"
-          defaultValue={item.quantity}
-          onBlur={(e) => {
-            const q = Number(e.target.value);
-            if (q !== item.quantity) onQty(q);
-          }}
-        />
-      </label>
-      <select
-        className="select w-auto print:hidden"
-        aria-label={`Meal for ${item.product.name}`}
-        value={item.mealType ?? ""}
-        onChange={(e) => onMeal(e.target.value || null)}
-      >
-        <option value="">Unassigned</option>
-        <option value="BREAKFAST">Breakfast</option>
-        <option value="LUNCH">Lunch</option>
-        <option value="DINNER">Dinner</option>
-        <option value="SNACK">Snack</option>
-        <option value="OTHER">Other</option>
-      </select>
-      <button
-        type="button"
-        className="text-xs font-semibold text-tj-red print:hidden"
-        onClick={onRemove}
-      >
-        Remove
-      </button>
+    <li className="border-b border-black/8 py-2.5">
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          onClick={onToggle}
+          className="inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-lg hover:bg-black/5"
+          aria-pressed={item.checked}
+          aria-label={`Mark ${item.product.name} ${item.checked ? "unchecked" : "checked"}`}
+        >
+          <input
+            type="checkbox"
+            checked={item.checked}
+            readOnly
+            tabIndex={-1}
+            className="pointer-events-none h-5 w-5"
+          />
+        </button>
+        <button
+          type="button"
+          onClick={onToggle}
+          className={`min-w-0 flex-1 text-left font-medium ${
+            item.checked ? "line-through text-tj-muted" : "hover:text-tj-red"
+          }`}
+        >
+          {item.product.name}
+        </button>
+      </div>
+      <div className="mt-2 flex flex-wrap items-center gap-2 pl-14 print:hidden">
+        <Link
+          href={`/products/${item.productId}`}
+          className="inline-flex min-h-10 items-center rounded-lg px-2 text-xs font-semibold text-tj-muted hover:bg-black/5 hover:text-tj-red"
+        >
+          Details
+        </Link>
+        <label className="text-xs text-tj-muted inline-flex items-center gap-1.5">
+          Qty
+          <input
+            type="number"
+            min={0.1}
+            step={0.5}
+            className="input w-20 py-1.5"
+            defaultValue={item.quantity}
+            onBlur={(e) => {
+              const q = Number(e.target.value);
+              if (q !== item.quantity) onQty(q);
+            }}
+          />
+        </label>
+        <select
+          className="select w-auto py-1.5"
+          aria-label={`Meal for ${item.product.name}`}
+          value={item.mealType ?? ""}
+          onChange={(e) => onMeal(e.target.value || null)}
+        >
+          <option value="">Unassigned</option>
+          <option value="BREAKFAST">Breakfast</option>
+          <option value="LUNCH">Lunch</option>
+          <option value="DINNER">Dinner</option>
+          <option value="SNACK">Snack</option>
+          <option value="OTHER">Other</option>
+        </select>
+        <button
+          type="button"
+          className="ml-auto inline-flex min-h-10 items-center rounded-lg px-2 text-xs font-semibold text-tj-red hover:bg-tj-red/5"
+          onClick={onRemove}
+        >
+          Remove
+        </button>
+      </div>
     </li>
   );
 }

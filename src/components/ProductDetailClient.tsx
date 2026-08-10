@@ -108,8 +108,11 @@ export function ProductDetailClient({ product }: { product: Product }) {
             className="h-48 w-48 rounded-2xl object-cover bg-white shadow-sm"
           />
         ) : (
-          <div className="h-48 w-48 rounded-2xl bg-tj-mist grid place-items-center text-tj-muted">
-            No image
+          <div className="flex h-48 w-48 flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-black/15 bg-gradient-to-br from-white to-tj-mist text-tj-muted">
+            <span className="font-[family-name:var(--font-display)] text-3xl text-tj-red/70">
+              TJ
+            </span>
+            <span className="text-sm">No image yet</span>
           </div>
         )}
         <div className="flex-1 space-y-3">
