@@ -79,7 +79,7 @@ export default async function ProductsPage({
       <ul className="divide-y divide-black/8 animate-rise-delay">
         {products.map((p) => (
           <li key={p.id} className="py-4">
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between px-2 -mx-2 rounded-xl transition hover:bg-white/70">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between px-3 py-1 -mx-2 rounded-xl transition hover:bg-white hover:shadow-sm">
               <Link
                 href={`/products/${p.id}`}
                 className="flex items-start gap-3 min-w-0 flex-1"
