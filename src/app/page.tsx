@@ -59,19 +59,19 @@ export default async function HomePage() {
 
     return (
       <div className="space-y-12">
-        <section className="relative overflow-hidden rounded-none min-h-[42vh] flex flex-col justify-end pb-8 pt-12">
+        <section className="relative overflow-hidden rounded-none min-h-[28vh] sm:min-h-[34vh] flex flex-col justify-end pb-7 pt-10">
           <div
             className="pointer-events-none absolute inset-0 -mx-4 bg-[radial-gradient(ellipse_at_70%_20%,rgba(200,16,46,0.18),transparent_55%),linear-gradient(135deg,#1c2430_0%,#2f6b4f_55%,#c8102e_120%)]"
             aria-hidden
           />
           <div className="relative z-10 max-w-2xl text-white px-1 animate-rise">
-            <p className="brand-mark font-[family-name:var(--font-display)] text-4xl sm:text-6xl leading-[0.95] tracking-tight">
+            <p className="brand-mark font-[family-name:var(--font-display)] text-4xl sm:text-5xl leading-[0.95] tracking-tight">
               TJ Pantry
             </p>
-            <h1 className="mt-4 text-lg sm:text-xl font-medium text-white/90 max-w-lg animate-rise-delay">
+            <h1 className="mt-3 text-base sm:text-lg font-medium text-white/90 max-w-lg animate-rise-delay">
               Pick up where you left off — lists, receipts, and ratings.
             </h1>
-            <div className="mt-6 flex flex-wrap gap-3 animate-rise-delay-2">
+            <div className="mt-5 flex flex-wrap gap-3 animate-rise-delay-2">
               {continueList ? (
                 <Link href={`/lists/${continueList.id}`} className="btn btn-primary">
                   Continue “{continueList.name}”

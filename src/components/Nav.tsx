@@ -33,9 +33,9 @@ export function Nav({ displayName }: { displayName?: string | null }) {
 
   if (pathname === "/login") {
     return (
-      <header className="sticky top-0 z-40 border-b border-black/5 bg-[rgba(247,250,252,0.85)] backdrop-blur-md">
-        <div className="mx-auto flex max-w-6xl items-center px-4 py-3">
-          <span className="font-[family-name:var(--font-display)] text-xl tracking-tight text-tj-red">
+      <header className="sticky top-0 z-40 border-b border-black/5 bg-[rgba(247,250,252,0.92)] backdrop-blur-md">
+        <div className="mx-auto flex max-w-6xl items-center px-4 py-3.5">
+          <span className="font-[family-name:var(--font-display)] text-2xl tracking-tight text-tj-red">
             TJ Pantry
           </span>
         </div>
@@ -44,11 +44,11 @@ export function Nav({ displayName }: { displayName?: string | null }) {
   }
 
   return (
-    <header className="sticky top-0 z-40 border-b border-black/5 bg-[rgba(247,250,252,0.85)] backdrop-blur-md">
+    <header className="sticky top-0 z-40 border-b border-black/5 bg-[rgba(247,250,252,0.92)] backdrop-blur-md">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3">
         <Link
           href="/"
-          className="font-[family-name:var(--font-display)] text-xl tracking-tight text-tj-red"
+          className="font-[family-name:var(--font-display)] text-2xl tracking-tight text-tj-red"
         >
           TJ Pantry
         </Link>
@@ -66,9 +66,9 @@ export function Nav({ displayName }: { displayName?: string | null }) {
               <Link
                 key={link.href}
                 href={link.href}
-                className={`rounded-lg px-2.5 py-1.5 transition ${
+                className={`rounded-lg px-3 py-2 transition ${
                   active
-                    ? "bg-tj-red text-white"
+                    ? "bg-tj-red text-white shadow-sm"
                     : "hover:bg-black/5 hover:text-tj-ink"
                 }`}
               >
@@ -77,7 +77,7 @@ export function Nav({ displayName }: { displayName?: string | null }) {
             );
           })}
           {displayName ? (
-            <span className="ml-1 rounded-lg px-2.5 py-1.5 text-tj-ink">
+            <span className="ml-1 rounded-lg px-3 py-2 text-tj-ink">
               {displayName}
             </span>
           ) : null}
@@ -92,7 +92,7 @@ export function Nav({ displayName }: { displayName?: string | null }) {
           ) : null}
           <button
             type="button"
-            className="btn btn-secondary px-3 py-2 text-sm"
+            className="btn btn-secondary min-h-11 px-3.5 py-2 text-sm"
             aria-expanded={open}
             aria-controls="mobile-nav"
             onClick={() => setOpen((v) => !v)}
@@ -118,7 +118,7 @@ export function Nav({ displayName }: { displayName?: string | null }) {
                 <li key={link.href}>
                   <Link
                     href={link.href}
-                    className={`block rounded-lg px-3 py-2.5 text-sm font-medium ${
+                    className={`block rounded-lg px-3 py-3 text-base font-medium ${
                       active
                         ? "bg-tj-red text-white"
                         : "text-tj-ink hover:bg-black/5"

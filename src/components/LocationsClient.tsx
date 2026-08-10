@@ -156,16 +156,14 @@ export function LocationsClient({ locations }: { locations: Location[] }) {
           City
           <input name="city" required className="input mt-1" />
         </label>
-        <div className="grid grid-cols-2 gap-3">
-          <label className="text-sm">
-            State
-            <input name="state" required className="input mt-1" />
-          </label>
-          <label className="text-sm">
-            ZIP
-            <input name="zip" required className="input mt-1" />
-          </label>
-        </div>
+        <label className="text-sm">
+          State
+          <input name="state" required className="input mt-1" />
+        </label>
+        <label className="text-sm">
+          ZIP
+          <input name="zip" required className="input mt-1" />
+        </label>
         <label className="text-sm">
           Hours
           <input name="hours" className="input mt-1" placeholder="Mon–Sun 8 AM – 9 PM" />
